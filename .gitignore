@@ -1,0 +1,29 @@
+# Secrets and local environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies and generated application output
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+
+# Local runtime data
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs and process state
+*.log
+*.pid
+
+# Local tooling and operating-system files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.tsbuildinfo

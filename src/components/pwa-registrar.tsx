@@ -1,0 +1,13 @@
+"use client";
+
+import { useEffect } from "react";
+
+export function PwaRegistrar() {
+  useEffect(() => {
+    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+      void navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    }
+  }, []);
+
+  return null;
+}
