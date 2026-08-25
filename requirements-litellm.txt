@@ -1,0 +1,4 @@
+# Newer proxy releases currently require a cryptography build unavailable for this macOS 12 x86_64 host.
+litellm[proxy]==1.95.0
+# LiteLLM 1.95.0 imports get_flat_dependant, removed by newer FastAPI releases.
+fastapi==0.136.3

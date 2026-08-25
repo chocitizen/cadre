@@ -214,10 +214,10 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
     role: role as AiMessage["role"],
     content: contentText
   }));
-  const registry = input.providerRegistry ?? createProviderRegistry();
-  const provider = registry.resolve(input.providerId);
 
   try {
+    const registry = input.providerRegistry ?? createProviderRegistry();
+    const provider = registry.resolve(input.providerId);
     const generation = await provider.generate({
       instructions: renderCadreChatInstructions({
         workspaceId: authorizedContext.workspace.id,

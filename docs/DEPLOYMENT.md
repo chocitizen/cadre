@@ -30,6 +30,8 @@ Before selecting or changing deployment architecture, obtain and verify:
 - domain and DNS authority;
 - TLS termination and certificate renewal;
 - private PostgreSQL service and network path;
+- a private LiteLLM runtime, loopback or private-network binding, and service supervision;
+- provider-account ownership, key recovery, and an enforceable provider-side spending limit;
 - process supervision and restart policy;
 - logs, monitoring, alerts, and retention;
 - encrypted backups and a tested restore;
@@ -40,7 +42,11 @@ The absence of Docker locally is not a reason to add it. Choose a deployment mec
 
 ## Runtime configuration
 
-Production requires server-only values for the database, OpenAI provider, model, and exact public origin. Secrets must be supplied through the host's protected secret mechanism, never copied from `.env.local` into source control or build artifacts.
+Production requires server-only values for the database, exact public origin, LiteLLM gateway URL and authentication, CADRE model alias, and only the provider credentials for explicitly enabled routes. Secrets must be supplied through the host's protected secret mechanism, never copied from `.env.local` into source control or build artifacts.
+
+The approved Phase 1 runtime is CADRE server → LiteLLM 1.95.0 → OpenRouter's free-model router through the `cadre-free` alias. Bind LiteLLM to loopback when it shares the host with CADRE. `CADRE_AI_GATEWAY_API_KEY`, `OPENROUTER_API_KEY`, and any future provider key remain server-only; none may use a `NEXT_PUBLIC_` prefix or enter a browser bundle. An OpenAI key and OpenAI billing are not required.
+
+The local gateway configuration lives at `config/litellm.yaml`. Local/self-hosted and premium/direct-provider lanes remain inactive until separately authorized and verified. Premium fallback stays disabled by default. LiteLLM's rate, timeout, retry, failure, and cooldown controls are routing safeguards, not a spending guarantee. Without LiteLLM PostgreSQL, its budget control fails open; Phase 1 must use an enforceable limit on the OpenRouter key itself.
 
 Set secure cookie behavior under HTTPS, restrict the database from public access, run the application as a non-root service account, and permit only required inbound ports.
 
@@ -55,9 +61,10 @@ Before release, verify:
 - persistent conversation and artifact reopen flow;
 - accurate Ready Dock state;
 - security headers, origin enforcement, rate limiting, and error redaction;
+- gateway loopback/private-network isolation, provider-side spending limits, and prompt/response log exclusion;
 - TLS, firewall, service account, and database isolation;
 - backup success and restore evidence;
 - monitoring and incident response;
 - exact deployed commit and post-deploy health.
 
-Push, remote creation, DNS changes, VPS mutation, and public exposure require a verified target and appropriate authorization. They are deferred at this checkpoint.
+Push, remote creation, deployment, DNS changes, VPS mutation, and public exposure require a verified target and explicit authorization. They are deferred at this checkpoint.

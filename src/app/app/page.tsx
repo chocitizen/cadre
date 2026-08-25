@@ -47,8 +47,8 @@ export default async function CommandOverviewPage() {
           <p>Obsidian remains authoritative for doctrine and canonical knowledge.</p>
         </div>
         <div>
-          <span className="status status-running">AI provider configured</span>
-          <p>Provider calls remain server-side and outside canonical storage.</p>
+          <span className="status status-canonical">AI gateway selected</span>
+          <p>Live provider readiness is validated separately; calls remain server-side.</p>
         </div>
       </section>
 

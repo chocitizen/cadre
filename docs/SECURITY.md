@@ -16,7 +16,7 @@ This is a development security baseline, not evidence of a hardened production e
 - Diagnostic checks report only `PRESENT`, `MISSING`, or `MISCONFIGURED`.
 - `.env.example` contains names and safe defaults only.
 
-The OpenAI adapter receives the key server-side. Browser code, persisted messages, artifacts, job errors, and application logs must never contain it.
+The LiteLLM gateway receives provider credentials server-side and listens on loopback. Its launcher allowlists only the active OpenRouter lane and necessary host/TLS variables; inactive OpenAI, Anthropic, Gemini, and unrelated credentials are not inherited by the gateway process. CADRE uses only its server-side gateway configuration. Browser code, persisted messages, artifacts, job errors, and application logs must never contain gateway or provider credentials. A future direct-provider lane requires an explicit configuration and launcher-allowlist change.
 
 ## Authentication and authorization
 
@@ -40,9 +40,14 @@ State-changing requests enforce exact same-origin and CSRF checks and validate s
 - Send only the minimum context needed for the request.
 - Do not bulk-send the Obsidian vault.
 - Keep provider code behind the AI service boundary.
+- Route external inference through the loopback LiteLLM gateway; never call OpenRouter or another provider from browser code.
+- Require HTTPS for any approved non-loopback gateway URL.
 - Treat model output as untrusted until validated.
 - Preserve provider/model/request metadata without storing credentials.
-- Use `store: false` for OpenAI Responses requests.
+- Do not log prompts, responses, authorization headers, gateway keys, or provider keys.
+- Keep premium routing and paid fallback disabled until explicitly approved.
+- Enforce the Phase 1 spend ceiling on the OpenRouter key. LiteLLM budget limits require its PostgreSQL database and fail open without it.
+- Apply LiteLLM rate, timeout, retry, failure, and cooldown controls before a request reaches an external provider.
 - Never treat provider conversation state as canonical memory.
 
 ## Logging and audit

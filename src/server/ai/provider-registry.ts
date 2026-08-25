@@ -1,5 +1,5 @@
 import type { AiProvider } from "./contracts";
-import { OpenAiProvider } from "./providers/openai";
+import { LiteLlmProvider } from "./providers/litellm";
 import { TestAiProvider } from "./providers/test";
 
 export interface AiProviderRegistryOptions {
@@ -48,10 +48,13 @@ export class AiProviderRegistry {
 export function createProviderRegistry(
   environment: NodeJS.ProcessEnv = process.env
 ): AiProviderRegistry {
+  const configuredTimeout = environment.CADRE_AI_TIMEOUT_MS?.trim();
   const providers: AiProvider[] = [
-    new OpenAiProvider({
-      apiKey: environment.OPENAI_API_KEY,
-      model: environment.OPENAI_MODEL
+    new LiteLlmProvider({
+      apiKey: environment.CADRE_AI_GATEWAY_API_KEY,
+      baseUrl: environment.CADRE_AI_GATEWAY_URL,
+      model: environment.CADRE_AI_MODEL,
+      timeoutMs: configuredTimeout ? Number(configuredTimeout) : undefined
     })
   ];
 
@@ -65,6 +68,6 @@ export function createProviderRegistry(
   return new AiProviderRegistry({
     providers,
     defaultProviderId:
-      environment.AI_PROVIDER?.trim() || environment.CADRE_AI_PROVIDER?.trim() || "openai"
+      environment.CADRE_AI_PROVIDER?.trim() || environment.AI_PROVIDER?.trim() || "litellm"
   });
 }

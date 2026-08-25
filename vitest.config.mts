@@ -7,7 +7,9 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     exclude:
-      process.env.RUN_OPENAI_LIVE_TEST === "true" ? [] : ["tests/integration/openai-live.test.ts"],
+      process.env.RUN_AI_GATEWAY_LIVE_TEST === "true"
+        ? []
+        : ["tests/integration/ai-gateway-live.test.ts"],
     coverage: {
       reporter: ["text", "json", "html"]
     }
