@@ -1,0 +1,22 @@
+[project]
+name = "cadre-core"
+version = "0.1.0"
+description = "CADRE Milestone 1 — Sovereign Core Foundation"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116,<1.0",
+  "uvicorn[standard]>=0.35,<1.0",
+  "sqlalchemy>=2.0.40,<3.0",
+  "psycopg[binary]>=3.2,<4.0",
+  "pydantic-settings>=2.10,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9.0",
+  "httpx>=0.28,<1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,89 +1,64 @@
-# CADRE
+# CADRE — Milestone 1: Sovereign Core Foundation
 
-CADRE is the private, owner-operated parent AI platform for governed workspaces across the Cho Zen Dell ecosystem. Foundation v0.1 is local-first: it provides a secure application boundary for workspaces, persistent conversations, Markdown artifacts, durable job state, notifications, audit history, and a Ready Dock without treating application data as canonical doctrine.
+This package establishes the first executable CADRE kernel: persistent doctrine, projects, command briefs, and system health.
 
-VESSEL is an initial workspace and future flagship application. It is not CADRE, and the full VESSEL application is outside this foundation.
+## Install
 
-## Current status
-
-- Canonical workspace: `/Users/wendellionaire/Library/Mobile Documents/com~apple~CloudDocs/cadre`
-- Git: initialized with a baseline on `main`; foundation work is on `feat/cadre-platform-foundation`; no remote is configured or verified.
-- Runtime: Next.js 16, React 19, TypeScript, Drizzle ORM, and a PostgreSQL-compatible local store.
-- AI: CADRE routes server-side requests through a pinned LiteLLM 1.95.0 loopback gateway. Phase 1 selects the `cadre-free` alias, which uses OpenRouter's free-model router. OpenAI is optional and disabled unless explicitly configured.
-- Live AI: the architecture and configuration are present, but an external completion remains blocked until an OpenRouter key is supplied securely and the LiteLLM gateway is launched.
-- Deployment: local only. VPS, domains, TLS, reverse proxy, backups, and public availability are unverified and deferred.
-- Canonical knowledge: the existing Wendellionaire Obsidian vault remains authoritative. This repository does not duplicate or replace locked doctrine.
-
-See [CURRENT_ENVIRONMENT_REPORT.md](docs/CURRENT_ENVIRONMENT_REPORT.md) for the evidence-backed checkpoint.
-
-## Local setup
-
-Requirements:
-
-- Node.js 20.9 or newer
-- npm
-- Python 3.10 through 3.14 for the LiteLLM gateway
-- A private `.env.local` containing required server-only values
+From the CADRE project root after extracting this package:
 
 ```bash
-npm ci
-npm run ai:gateway:install
-npm run verify:env
-npm run db:migrate
-npm run db:seed
-npm run owner:create
-npm run dev
+cp .env.example .env
 ```
 
-On Intel macOS, the pinned LiteLLM package may build from source and therefore also needs the Xcode Command Line Tools; its build backend may bootstrap Rust into the user's cache. `CADRE_PYTHON` is a command-scoped installer override—the installer does not load it from `.env.local`. When the default `python3` is outside the supported range, run `CADRE_PYTHON=/absolute/path/to/python3.12 npm run ai:gateway:install`.
+Change the two occurrences of `change_me` in `.env` and `docker-compose.yml` to the same strong database password.
 
-Open `http://localhost:3000`. Do not expose the development server publicly.
-
-For live AI, place the OpenRouter credential in `.env.local`, then start the gateway in a separate private terminal:
+Then run:
 
 ```bash
-npm run ai:gateway:start
+docker compose up -d --build
 ```
 
-The gateway binds to `127.0.0.1:4000`. CADRE calls its `cadre-free` model alias; changing the underlying model is a configuration change, not an application-code change.
-
-The owner bootstrap command is interactive. Never place a password, API key, session token, or recovery credential in command history, source code, logs, screenshots, or chat.
-
-## Validation
+Validate:
 
 ```bash
-npm run validate
-npm run test:e2e
+./scripts/validate.sh
 ```
 
-The live AI integration test is intentionally separate because it calls the configured gateway and an external provider:
+Open:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+The API binds to loopback only. For a remote private host, use an authenticated
+SSH tunnel or a separately approved HTTPS reverse proxy; do not publish port
+8000 directly.
+
+## Local development without Docker
 
 ```bash
-npm run test:ai:live
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev]'
+export CADRE_DATABASE_URL='sqlite:///./cadre.db'
+pytest -q
+uvicorn app.main:app --reload
 ```
 
-Passing local checks establishes only the state those checks actually exercised. It does not establish public-deployment readiness.
+## M1 API
 
-The deterministic desktop and mobile end-to-end flow passes locally. A real operator account still requires the interactive `npm run owner:create` bootstrap. Live external inference additionally requires a securely supplied OpenRouter key and a running LiteLLM gateway; no OpenAI key or OpenAI billing is required.
+- `GET /api/v1/health`
+- `GET /api/v1/doctrine`
+- `POST /api/v1/doctrine`
+- `GET /api/v1/projects`
+- `POST /api/v1/projects`
+- `GET /api/v1/command-briefs`
+- `POST /api/v1/command-briefs`
 
-## Authority boundary
+## Security boundary
 
-- Obsidian: doctrine, approved canonical knowledge, decisions, standards, project state, and promotion authority.
-- This Git repository: CADRE application source, migrations, tests, and technical release state.
-- Database: operational users, sessions, workspaces, conversations, jobs, notifications, audit events, and artifact metadata.
-- Artifact storage: exact payload bytes, versions, and checksums.
-- LiteLLM and its configured model providers: inference routing only; never a canonical database or authority source.
-
-Read [DATA_AUTHORITY.md](docs/DATA_AUTHORITY.md) and [OBSIDIAN_BOUNDARY.md](docs/OBSIDIAN_BOUNDARY.md) before adding retrieval, synchronization, or write-back.
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Database schema](docs/DATABASE_SCHEMA.md)
-- [Data authority](docs/DATA_AUTHORITY.md)
-- [Security](docs/SECURITY.md)
-- [Ready Dock](docs/READY_DOCK.md)
-- [Obsidian boundary](docs/OBSIDIAN_BOUNDARY.md)
-- [Operations](docs/OPERATIONS.md)
-- [Backup, restore, and rollback](docs/BACKUP_RESTORE_ROLLBACK.md)
-- [Deployment](docs/DEPLOYMENT.md)
+M1 intentionally does not expose this service as a production public API with
+authentication. Docker Compose binds port 8000 to `127.0.0.1` so it remains
+private to the host until the identity/authentication milestone and an approved
+HTTPS boundary are installed. Do not place this directly on the public internet
+as-is.

@@ -1,0 +1,29 @@
+.git/
+.gitignore
+.env
+.env.local
+.env.*.local
+.cadre-backups/
+.venv/
+.venv-*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.db
+*.zip
+
+# Superseded local runtime and generated output.
+.next/
+node_modules/
+data/
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo
+
+# Development-only material is not required in the runtime image.
+tests/
+htmlcov/
+.coverage
+build/
+dist/
+*.egg-info/

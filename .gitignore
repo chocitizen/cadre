@@ -1,30 +1,26 @@
-# Secrets and local environment
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
 .env
 .env.local
 .env.*.local
-.venv-litellm/
+*.db
+.DS_Store
 
-# Dependencies and generated application output
-node_modules/
+# Preserved local state from the prior Next.js foundation and validation tooling.
+.cadre-backups/
+.venv-litellm/
 .next/
-out/
-coverage/
+node_modules/
+data/
 playwright-report/
 test-results/
+tsconfig.tsbuildinfo
 
-# Local runtime data
-data/
-*.db
-*.db-shm
-*.db-wal
-
-# Logs and process state
-*.log
-*.pid
-
-# Local tooling and operating-system files
-.DS_Store
-.idea/
-.vscode/
-*.swp
-*.tsbuildinfo
+# Python packaging and coverage output.
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
