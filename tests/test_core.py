@@ -56,6 +56,8 @@ def test_health_and_core_crud():
         health = client.get("/api/v1/health")
         assert health.status_code == 200
         assert health.json()["status"] == "ok"
+        assert health.json()["milestone"] == "M4"
+        assert health.json()["version"] == "0.5.0"
 
         assert client.get("/api/v1/gateway/commands").status_code == 401
         command_registry = client.get("/api/v1/gateway/commands", headers=mission_control)
