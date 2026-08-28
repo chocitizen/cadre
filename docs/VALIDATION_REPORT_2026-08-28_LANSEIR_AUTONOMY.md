@@ -48,9 +48,8 @@
 - LiteLLM: local CLI version 1.95.0 exists, but no LiteLLM listener was active.
 - OpenRouter: no OpenRouter credential or verified provider route was found.
   The local zero-provider-cost Guide remains the enabled default.
-- Identity email delivery: webhook settings exist but no verified provider is
-  active, so verification and recovery responses accurately report delivery as
-  pending.
+- Identity email delivery: no delivery adapter or verified provider is active,
+  so verification and recovery responses accurately report delivery as pending.
 
 Repository validation is not production acceptance. Complete the external gates
 in `docs/DEPLOYMENT_SOP.md` and `docs/HOSTINGER_OPERATIONS_RUNBOOK.md` before
