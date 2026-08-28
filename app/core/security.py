@@ -5,9 +5,13 @@ import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.db.session import get_db
+from app.models.entities import User
+from app.services.identity import require_csrf, resolve_session
 
 
 KNOWN_ROLES = {
@@ -19,8 +23,10 @@ KNOWN_ROLES = {
     "griot",
     "sentinel",
 }
-READ_ROLES = frozenset(KNOWN_ROLES)
 WRITE_ROLES = frozenset({"mission_control", "al"})
+DOCTRINE_READ_ROLES = frozenset({"mission_control", "al", "griot"})
+REGISTRY_READ_ROLES = frozenset({"mission_control", "al"})
+OPERATIONS_READ_ROLES = frozenset({"mission_control", "al"})
 
 
 @dataclass(frozen=True)
@@ -96,5 +102,36 @@ def require_roles(*allowed_roles: str) -> Callable[[Request], ApiIdentity]:
     return dependency
 
 
-require_read = require_roles(*sorted(READ_ROLES))
 require_write = require_roles(*sorted(WRITE_ROLES))
+require_doctrine_read = require_roles(*sorted(DOCTRINE_READ_ROLES))
+require_registry_read = require_roles(*sorted(REGISTRY_READ_ROLES))
+require_operations_read = require_roles(*sorted(OPERATIONS_READ_ROLES))
+
+
+def require_user(request: Request, db: Session = Depends(get_db)) -> User:
+    resolved = resolve_session(db, request)
+    if resolved is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sign in required")
+    return resolved[1]
+
+
+def require_user_write(request: Request, db: Session = Depends(get_db)) -> User:
+    resolved = resolve_session(db, request)
+    if resolved is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sign in required")
+    session, user = resolved
+    require_csrf(request, session)
+    return user
+
+
+def require_admin(user: User = Depends(require_user)) -> User:
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access required")
+    return user
+
+
+def require_admin_write(request: Request, db: Session = Depends(get_db)) -> User:
+    user = require_user_write(request, db)
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access required")
+    return user

@@ -32,6 +32,8 @@ SAFE_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 SERVICE_TARGET_ACTIONS = frozenset({"restart", "logs"})
 RELEASE_TARGET_ACTIONS = frozenset({"deploy"})
 MUTATING_ACTIONS = frozenset({"deploy", "rollback", "restart", "backup", "restore-test", "security-audit"})
+PROTECTED_READ_ACTIONS = frozenset({"logs"})
+AUDIT_GATED_ACTIONS = MUTATING_ACTIONS | PROTECTED_READ_ACTIONS
 
 
 class OperationError(RuntimeError):
@@ -562,6 +564,7 @@ class Controller:
             "CADRE_DATABASE_URL",
             "CADRE_PUBLIC_HOST",
             "CADRE_ACME_EMAIL",
+            "CADRE_ADMIN_EMAILS",
             "CADRE_API_TOKENS_JSON",
         }
         missing = sorted(name for name in required if not values.get(name))
@@ -594,11 +597,14 @@ class Controller:
             raise OperationError("Database URL is inconsistent with the fixed production database policy.")
         host = values["CADRE_PUBLIC_HOST"]
         email = values["CADRE_ACME_EMAIL"]
+        admin_emails = values["CADRE_ADMIN_EMAILS"].split(",")
         if (
             not re.fullmatch(r"(?=.{1,253}\Z)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", host)
             or not re.fullmatch(r"[^@\s]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", email)
+            or not admin_emails
+            or any(not re.fullmatch(r"[^@\s]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", item) for item in admin_emails)
         ):
-            raise OperationError("Production host or ACME email is invalid.")
+            raise OperationError("Production host or operator email policy is invalid.")
 
         try:
             tokens = json.loads(values["CADRE_API_TOKENS_JSON"])
@@ -1220,7 +1226,7 @@ class Controller:
             try:
                 self.authorize(action, target)
                 self._enforce_rate(action)
-                if action in MUTATING_ACTIONS:
+                if action in AUDIT_GATED_ACTIONS:
                     self.audit.assert_ready()
                     intent = self.audit.append(
                         {
@@ -1290,8 +1296,14 @@ class Controller:
                     "record_hash": record["record_hash"],
                 }
             except Exception as audit_error:
-                if intent is None and action in MUTATING_ACTIONS:
-                    result = {"error": "Audit durability unavailable; privileged action was not executed."}
+                if action in AUDIT_GATED_ACTIONS:
+                    result = {
+                        "error": (
+                            "Audit durability unavailable; protected output was suppressed."
+                            if action in PROTECTED_READ_ACTIONS
+                            else "Audit durability unavailable; privileged result was suppressed."
+                        )
+                    }
                 else:
                     result["audit_error"] = "Audit terminal receipt could not be completed; inspect protected audit state."
                 exit_status = 1

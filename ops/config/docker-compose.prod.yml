@@ -2,7 +2,7 @@ name: lanseir-cadre
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine3.24@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
     restart: unless-stopped
     environment:
       POSTGRES_DB: cadre
@@ -36,6 +36,15 @@ services:
       CADRE_RELEASE_ID: ${CADRE_RELEASE_ID:?CADRE_RELEASE_ID is required}
       CADRE_API_TOKENS_JSON: ${CADRE_API_TOKENS_JSON:?CADRE_API_TOKENS_JSON is required}
       CADRE_MAX_REQUEST_BODY_BYTES: 1048576
+      CADRE_SESSION_DAYS: 30
+      CADRE_ADMIN_EMAILS: ${CADRE_ADMIN_EMAILS:?CADRE_ADMIN_EMAILS is required}
+      CADRE_AI_PROVIDER: ${CADRE_AI_PROVIDER:-local}
+      CADRE_AI_MODEL: ${CADRE_AI_MODEL:-lanseir-reflection-v1}
+      CADRE_AI_BASE_URL: ${CADRE_AI_BASE_URL:-https://api.openai.com/v1}
+      CADRE_AI_API_KEY: ${CADRE_AI_API_KEY:-}
+      CADRE_AI_DAILY_MESSAGE_LIMIT: 40
+      CADRE_AUTH_RATE_LIMIT_PER_MINUTE: 20
+      CADRE_REQUEST_TIMEOUT_SECONDS: 30
     depends_on:
       db:
         condition: service_healthy
@@ -63,7 +72,7 @@ services:
     pids_limit: 256
 
   proxy:
-    image: caddy:2-alpine
+    image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     restart: unless-stopped
     environment:
       CADRE_PUBLIC_HOST: ${CADRE_PUBLIC_HOST:?CADRE_PUBLIC_HOST is required}

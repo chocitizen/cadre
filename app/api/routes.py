@@ -7,7 +7,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.config import get_settings
-from app.core.security import ApiIdentity, require_read, require_write
+from app.core.security import (
+    ApiIdentity,
+    require_doctrine_read,
+    require_operations_read,
+    require_registry_read,
+    require_write,
+)
 from app.models.entities import CommandBrief, DoctrineEntry, Project
 from app.schemas.entities import BriefCreate, BriefOut, DoctrineCreate, DoctrineOut, ProjectCreate, ProjectOut
 
@@ -20,14 +26,14 @@ def health() -> dict:
     return {
         "status": "ok",
         "system": "CADRE",
-        "milestone": "M1",
-        "version": "0.2.0",
+        "milestone": "M2",
+        "version": "0.3.0",
         "release": settings.release_id,
     }
 
 
 @router.get("/operations/state")
-def operations_state(_: ApiIdentity = Depends(require_read)) -> dict:
+def operations_state(_: ApiIdentity = Depends(require_operations_read)) -> dict:
     """Return the sanitized, read-only Mission Control state snapshot.
 
     The production reverse proxy does not publish this route. It is available
@@ -60,7 +66,7 @@ def operations_state(_: ApiIdentity = Depends(require_read)) -> dict:
 
 @router.get("/doctrine", response_model=list[DoctrineOut])
 def list_doctrine(
-    _: ApiIdentity = Depends(require_read),
+    _: ApiIdentity = Depends(require_doctrine_read),
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=1_000_000),
@@ -88,7 +94,7 @@ def create_doctrine(
 
 @router.get("/projects", response_model=list[ProjectOut])
 def list_projects(
-    _: ApiIdentity = Depends(require_read),
+    _: ApiIdentity = Depends(require_registry_read),
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=1_000_000),
@@ -116,7 +122,7 @@ def create_project(
 
 @router.get("/command-briefs", response_model=list[BriefOut])
 def list_briefs(
-    _: ApiIdentity = Depends(require_read),
+    _: ApiIdentity = Depends(require_registry_read),
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=1_000_000),
