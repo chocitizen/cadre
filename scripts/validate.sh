@@ -24,7 +24,7 @@ printf '\n[1/4] Local test suite\n'
 CADRE_DATABASE_URL='sqlite:///:memory:' PYTHONDONTWRITEBYTECODE=1 \
   "$python_bin" -m pytest -q -p no:cacheprovider
 printf '\n[2/4] Type check\n'
-"$python_bin" -m mypy app
+"$python_bin" -m mypy --cache-dir=/dev/null app
 printf '\n[3/4] Dependency integrity\n'
 "$python_bin" -m pip check
 printf '\n[4/4] Application import\n'
