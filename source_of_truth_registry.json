@@ -1,0 +1,55 @@
+{
+  "registry_version": "1.0",
+  "promoted_at": "2026-08-26",
+  "promotion_signal": "FULL SEND",
+  "authority": "LANSEIR",
+  "records": [
+    {
+      "id": "LNS-CHR-001",
+      "path": "00_governance/lanseir_identity_charter.md",
+      "status": "canonical"
+    },
+    {
+      "id": "LNS-OPC-001",
+      "path": "00_governance/lanseir_operating_character.md",
+      "status": "canonical"
+    },
+    {
+      "id": "LNS-EXP-001",
+      "path": "01_intelligence/lanseir_expression_profile.md",
+      "status": "canonical",
+      "migration_critical": true
+    },
+    {
+      "id": "CDR-POR-001",
+      "path": "01_intelligence/cadre_presence_orientation_standard.md",
+      "status": "canonical"
+    },
+    {
+      "id": "CDR-SYN-001",
+      "path": "01_intelligence/cadre_synthesis_standard.md",
+      "status": "canonical"
+    },
+    {
+      "id": "LNS-RHY-001",
+      "path": "02_operations/institutional_rhythm_standard.md",
+      "status": "canonical"
+    },
+    {
+      "id": "LNS-INH-001",
+      "path": "03_migration/lanseir_inheritance_pack_spec.md",
+      "status": "canonical",
+      "migration_critical": true
+    },
+    {
+      "id": "VSL-PDX-001",
+      "path": "04_workspaces/vessel_product_direction.md",
+      "status": "approved_product_direction"
+    },
+    {
+      "id": "LNS-PRM-001",
+      "path": "00_governance/promotion_rule.md",
+      "status": "canonical"
+    }
+  ]
+}

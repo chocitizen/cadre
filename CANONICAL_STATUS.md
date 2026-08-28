@@ -1,11 +1,13 @@
-# CADRE Canonical Status
+# LANSEIR Canonical Status
 
 ## Current authority
 
-- System: CADRE M1 — Sovereign Core Foundation
+- System: LANSEIR sovereign platform with CADRE internal execution
 - Canonical baseline version: 0.1.0
 - Hostinger operations candidate: 0.2.0
-- Status: Current canonical core with a locally validated operations proposal
+- Autonomous platform candidate: 0.3.0
+- Universal Prompt Gateway candidate: 0.4.0
+- Status: Locally validated candidate; protected-main review and production acceptance pending
 - Promotion date: 2026-08-26
 - Source package: `CADRE_M1_Sovereign_Core_Foundation_v0.1.0.zip`
 - Verified source SHA-256: `24382898e4990a19f3d21fe9fc30cf6b4df0313dd0e8a20b19f3ac42674e387c`
@@ -13,9 +15,18 @@
 The source package was designated as the new canonical CADRE core, superseding
 the prior Next.js modular-monolith direction.
 
-On 2026-08-28, the FULL SEND Hostinger operations authorization expanded the
-canonical boundary without replacing the FastAPI core. LANSEIR remains the
-sovereign parent; CADRE gains a constrained operations layer beneath it.
+On 2026-08-28, FULL SEND authorization expanded the canonical boundary without
+replacing the FastAPI core. The candidate adds the LANSEIR product shell,
+evidence-gated mission execution, deterministic recovery/FIX, canonical-content
+provenance, and Porter lifecycle records. The verified foundation package is
+preserved byte-for-byte under `provenance/` and enforced by
+`scripts/validate_foundation_sync.py`.
+
+The 0.4.0 candidate extends the current M2 execution architecture with a
+Universal Prompt Gateway, versioned cross-interface execution state, durable
+short-command semantics, specialist-authority assembly, Al capability adapters,
+and governed Railway staging/model-routing boundaries. It preserves the existing
+Command Brief and Mission Control state machines and does not promote production.
 
 ## Controlled installation changes
 
@@ -48,19 +59,26 @@ The preservation branch contains the full pre-pivot tracked and untracked
 non-secret state. Remote publication of that branch remains pending explicit
 approval for the configured GitHub destination.
 
-## Deferred by M1
+## External gates
 
-LiteLLM/model routing, specialist assembly, LANSEIR orchestration, Mission
-Control UI, Ready Dock, notifications, and VESSEL integration remain deferred.
-They require separately authorized milestones and must not be reintroduced as a
-parallel core.
+The configured private `chocitizen/cadre` remote is preserved; it was not
+silently repointed. Candidate branch `feat/lanseir-m2-completion` is published,
+and protected pull request #1 is open. GitHub
+requires an independent approving review before promotion to `main`. Hostinger
+deployment, DNS/HTTPS acceptance, off-server backup, and live restore evidence
+remain blocked until host access and production inputs are verified.
 
-The role registry and internal Mission Control state model now exist, but ARC
-model routing remains disabled until the separately validated AI service is
-present. Repository implementation is not evidence of Hostinger installation
-or production readiness; live acceptance remains governed by the runbook.
+ARC model routing remains disabled until a separately validated LiteLLM service
+and provider credentials are present. Repository implementation is not evidence
+of live Hostinger installation or production readiness.
+
+Railway staging also remains externally gated until the runtime proves the CLI,
+project binding, credential, environment configuration, deployment URL, HTTP
+health, and responsive rendering. No Railway deployment is claimed by the 0.4.0
+repository candidate alone.
 
 The 2026-08-28 operations proposal adds a canonical-Git deployment controller,
 release-bound health, write-ahead auditing, bounded backups, and production
-secret preflight. These changes remain proposed until the verified commit is
-published to GitHub `main` and the live Hostinger acceptance sequence passes.
+secret preflight. These changes remain proposed until the protected pull
+request is approved and merged to GitHub `main`, then the live Hostinger
+acceptance sequence passes.

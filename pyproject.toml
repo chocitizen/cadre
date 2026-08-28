@@ -1,29 +1,33 @@
 [project]
-name = "cadre-core"
-version = "0.2.0"
-description = "CADRE Milestone 1 — Sovereign Core with governed operations"
+name = "lanseir-platform"
+version = "0.5.0"
+description = "LANSEIR sovereign parent platform with the internal CADRE execution system"
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi>=0.116,<1.0",
-  "uvicorn[standard]>=0.35,<1.0",
-  "sqlalchemy>=2.0.40,<3.0",
-  "psycopg[binary]>=3.2,<4.0",
-  "pydantic-settings>=2.10,<3.0",
+  "fastapi==0.141.1",
+  "uvicorn[standard]==0.52.4",
+  "sqlalchemy==2.0.52",
+  "psycopg[binary]==3.3.4",
+  "pydantic-settings==2.15.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=9.0.3,<10.0",
-  "httpx>=0.28,<1.0",
-  "mypy>=1.17,<2.0",
+  "pytest==9.0.3",
+  "httpx==0.28.1",
+  "mypy==1.18.2",
+  "pip-audit==2.10.1",
 ]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==80.10.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["resources/*.json", "web/*.html", "web/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

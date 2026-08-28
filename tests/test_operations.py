@@ -48,7 +48,9 @@ def make_controller(tmp_path: Path, actor: str = "lanseir-deploy") -> Controller
                 f"CADRE_DB_PASSWORD={password}",
                 f"CADRE_DATABASE_URL=postgresql+psycopg://cadre:{password}@db:5432/cadre",
                 "CADRE_PUBLIC_HOST=cadre.test.internal",
+                "CADRE_PUBLIC_URL=https://cadre.test.internal",
                 "CADRE_ACME_EMAIL=ops@cadre.test.internal",
+                "CADRE_ADMIN_EMAILS=owner@cadre.test.internal",
                 f"CADRE_API_TOKENS_JSON={json.dumps(tokens, separators=(',', ':'))}",
             )
         )
@@ -270,7 +272,26 @@ def test_audit_failure_prevents_mutating_handler(tmp_path: Path, monkeypatch):
     exit_status, result = controller.execute("restart", "api")
     assert exit_status == 1
     assert invoked is False
-    assert "not executed" in result["error"]
+    assert "Audit durability unavailable" in result["error"]
+
+
+def test_terminal_audit_failure_suppresses_protected_logs(tmp_path: Path, monkeypatch):
+    controller = make_controller(tmp_path, "lanseir-invictus")
+    calls = 0
+
+    def fail_terminal(_payload):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return {"record_hash": "a" * 64}
+        raise OSError("ledger unavailable")
+
+    monkeypatch.setattr(controller.audit, "append", fail_terminal)
+    monkeypatch.setattr(controller.audit, "assert_ready", lambda: None)
+    monkeypatch.setattr(controller, "logs", lambda _: {"logs": "sensitive service output"})
+    exit_status, result = controller.execute("logs", "api")
+    assert exit_status == 1
+    assert result == {"error": "Audit durability unavailable; protected output was suppressed."}
 
 
 def test_placeholder_secrets_fail_closed(tmp_path: Path):
@@ -279,7 +300,9 @@ def test_placeholder_secrets_fail_closed(tmp_path: Path):
         "CADRE_DB_PASSWORD=replace_with_a_strong_unique_password\n"
         "CADRE_DATABASE_URL=postgresql+psycopg://cadre:replace_with_url_encoded_password@db:5432/cadre\n"
         "CADRE_PUBLIC_HOST=cadre.example.com\n"
+        "CADRE_PUBLIC_URL=https://cadre.example.com\n"
         "CADRE_ACME_EMAIL=operations@example.com\n"
+        "CADRE_ADMIN_EMAILS=owner@example.com\n"
         "CADRE_API_TOKENS_JSON={}\n",
         encoding="utf-8",
     )

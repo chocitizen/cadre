@@ -1,18 +1,18 @@
-name: Validate CADRE operations release
+name: Validate LANSEIR platform release
 
 on:
   pull_request:
   push:
     branches:
       - main
-      - feat/cadre-platform-foundation
+      - "feat/**"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: cadre-validation-${{ github.ref }}
+  group: lanseir-validation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
           cache: pip
@@ -30,8 +30,8 @@ jobs:
       - name: Install validation dependencies
         run: |
           python -m venv .venv
-          .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/python -m pip install -e '.[dev]' pip-audit
+          .venv/bin/python -m pip install 'pip==26.2.1'
+          .venv/bin/python -m pip install -e '.[dev]'
 
       - name: Validate application and operations policy
         env:
@@ -46,7 +46,11 @@ jobs:
           .venv/bin/python -m pytest -q -p no:cacheprovider
           .venv/bin/python -m mypy --cache-dir=/dev/null app
           .venv/bin/python -m pip check
-          .venv/bin/python -m pip_audit
+          .venv/bin/python -m pip wheel . --no-deps --wheel-dir /tmp/lanseir-wheel
+          .venv/bin/python -m pip_audit -r requirements.lock --require-hashes --disable-pip --progress-spinner off
+          .venv/bin/python -m compileall -q app scripts
+          node --check app/web/static/app.js
+          git diff --check
           bash -n ops/install.sh
           sh -n scripts/cadre-ops ops/config/cadre-ops-root
           python -m json.tool ops/config/roles.json >/dev/null
@@ -54,5 +58,6 @@ jobs:
           python -m json.tool ops/config/services.json >/dev/null
           python -m json.tool ops/config/limits.json >/dev/null
           python -m json.tool ops/config/repository.json >/dev/null
+          docker compose --env-file .env.example config --quiet
           docker compose --env-file ops/config/cadre.env.example -f ops/config/docker-compose.prod.yml config --quiet
           docker build -f ops/config/Dockerfile.prod -t cadre:${GITHUB_SHA} .

@@ -1,0 +1,54 @@
+{
+  "package": "LANSEIR_CADRE_FOUNDATION_SYNC",
+  "version": "1.0.0",
+  "date": "2026-08-26",
+  "status": "CANONICAL_PROMOTION_PACKAGE",
+  "promotion_signal": "FULL SEND",
+  "install_intent": "Merge contents into canonical repository root after path reconciliation; do not overwrite newer canonical records blindly.",
+  "files": [
+    {
+      "path": "00_governance/lanseir_identity_charter.md",
+      "sha256": "c4411fb441357c6a655077460f2d51bd71bebea99c5cb55d0ae6f71d76a474cf"
+    },
+    {
+      "path": "00_governance/lanseir_operating_character.md",
+      "sha256": "551f271f2b4ff487c33a0fb61bbed06ecee942aa2c890393e36b0ca3a673594a"
+    },
+    {
+      "path": "00_governance/promotion_rule.md",
+      "sha256": "056dcc3328e8020a8fe68938d73ff319e292953932b877e6fa3e51e33cb6271f"
+    },
+    {
+      "path": "01_intelligence/cadre_presence_orientation_standard.md",
+      "sha256": "3e1af99f39f63f4409983b0a51051b639fb282fe2cca90bb6bf926c25a01b9d9"
+    },
+    {
+      "path": "01_intelligence/cadre_synthesis_standard.md",
+      "sha256": "ea1b6da639b6d12f18998362785cd9c2795efa047161780642fac256713b4ae7"
+    },
+    {
+      "path": "01_intelligence/lanseir_expression_profile.md",
+      "sha256": "e86f9db2bae76f82652cd2a73a4e98f87d6d3d2add92370efdd28b8fe1aba6ae"
+    },
+    {
+      "path": "02_operations/institutional_rhythm_standard.md",
+      "sha256": "404fa3f258483e0818c13db9e6220675ac34fdc379d6f4d0e1eec1750f431122"
+    },
+    {
+      "path": "03_migration/lanseir_inheritance_pack_spec.md",
+      "sha256": "f18b5bf6567e0214fa54946f72c92ecddbfacecd4a0da83e8dc83f6f6ea39e04"
+    },
+    {
+      "path": "04_workspaces/vessel_product_direction.md",
+      "sha256": "c34ae38b3e0d6fe0b013cee59c036e2ea7317c5cc01b65720f06c87d26908006"
+    },
+    {
+      "path": "README.md",
+      "sha256": "98141c436e770fc8bc1cb4038dca353d3986db50c2751050fe1c3aa2ef31399d"
+    },
+    {
+      "path": "source_of_truth_registry.json",
+      "sha256": "9e3c37420c4d026514f40ce55ea456e3f132832940715a03c93c2975d917c68b"
+    }
+  ]
+}

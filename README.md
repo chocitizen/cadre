@@ -1,8 +1,9 @@
-# CADRE — Sovereign Core + Governed Operations
+# LANSEIR — Sovereign Platform
 
-LANSEIR remains the sovereign parent platform. This repository contains the
-canonical CADRE FastAPI core plus the Hostinger operations layer authorized for
-Mission Control, Al, ARC, Invictus, Porter, Griot, and Sentinel.
+LANSEIR is the sovereign parent platform. CADRE is its internal execution
+system: Mission Control, Al, ARC, Invictus, Porter, Griot, Sentinel, and the
+specialist registry. The repository combines the private operating core with a
+public-facing, mobile-first LANSEIR product experience.
 
 ## Install
 
@@ -12,7 +13,7 @@ From the CADRE project root after extracting this package:
 cp .env.example .env
 ```
 
-Replace `change_me` in ignored `.env` with one strong database password in
+Replace `replace_with_*` in ignored `.env` with one strong database password in
 both `CADRE_DB_PASSWORD` and the URL-encoded password inside
 `CADRE_DATABASE_URL`. Replace every API token placeholder with a different
 random value of at least 32 characters. Do not edit tracked Compose policy or
@@ -33,6 +34,7 @@ Validate:
 Open:
 
 ```text
+http://127.0.0.1:8000/
 http://127.0.0.1:8000/docs
 ```
 
@@ -45,28 +47,56 @@ SSH tunnel or a separately approved HTTPS reverse proxy; do not publish port
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e '.[dev]'
+python -m pip install -e '.[dev]'
 export CADRE_DATABASE_URL='sqlite:///./cadre.db'
-pytest -q
+./scripts/validate.sh
 uvicorn app.main:app --reload
 ```
 
-## M1 API
+## Product and internal APIs
 
-- `GET /api/v1/health`
-- `GET /api/v1/doctrine`
-- `POST /api/v1/doctrine`
-- `GET /api/v1/projects`
-- `POST /api/v1/projects`
-- `GET /api/v1/command-briefs`
-- `POST /api/v1/command-briefs`
-- `GET /api/v1/operations/state` (private/internal Mission Control read model)
+- Public product: identity, account control/export/deletion, library,
+  entitlements, reading progress, bookmarks, notes, Captain's Log, Voyages,
+  Support, and the LANSEIR Guide.
+- Private CADRE: doctrine, projects, Command Briefs, Mission Control, specialist
+  dispatch, evidence verification, recovery/FIX, provenance, and Porter
+  lifecycle records.
+- Universal Prompt Gateway: persistent context packets, durable short-command
+  semantics, approval/lock resolution, specialist-authority assembly, Al service
+  capability discovery, governed dispatch, exact blockers, and audit receipts.
+- Constitutional execution: self-contained copy-ready handoffs, explicit lead /
+  support / validation authority, signal advance-then-deliver sequencing,
+  artifact-plus-note dual delivery, client/channel parity, and fail-closed
+  production readiness.
+- Minimal public health: `GET /api/v1/health` and the proxy alias `/healthz`.
 
-`GET /api/v1/health` is public and intentionally minimal. Every other API route
-requires `Authorization: Bearer <role-token>`. Mission Control and Al tokens
-may write registry records; all configured CADRE role tokens may read them.
-Collection routes use `limit` and `offset`, with a server-enforced maximum of
-100 items per response.
+Product routes use secure server sessions and CSRF protection for mutations.
+Internal routes require a role-scoped service bearer token and are denied by
+the production proxy. Administrator status is never inferred from signup: a
+verified, configured email must be explicitly promoted by Mission Control.
+VESSEL chapters can be installed only when their content hash matches an
+approved canonical source record.
+
+Mission completion is evidence-gated. Status messages do not count as progress;
+failed, blocked, stalled, or verification-failed missions expose FIX. A
+deterministic failure dispatches an Al recovery mission before the bounded retry
+of the original action. See `docs/MISSION_EXECUTION_STANDARD.md`.
+
+Authorized interfaces use `POST /api/v1/gateway/resolve`; `STATUS`, `SIGNAL`,
+`NOW`, `GO`, `ADVANCE`, `ACT`, `ACTIVELY ADVANCE`, `DEPLOY`, `+`, and
+`YOU KNOW WHAT TO DO` are resolved against canonical state rather than treated
+as isolated chat prompts. See `docs/UNIVERSAL_PROMPT_GATEWAY.md` and
+`docs/AL_OPERATOR_CHARTER.md`.
+
+See `00_governance/cadre_constitutional_execution_standard.md`,
+`docs/CLIENT_EXPERIENCE_SOP.md`, and `docs/GLOBAL_INPUT_HANDOFF_SOP.md` for the
+globally inherited execution contract.
+
+Authorized owner bootstrap is available as
+`python -m app.services.owner_provisioning`. It accepts only an email already in
+`CADRE_ADMIN_EMAILS`, reads the initial credential from a named environment
+variable, never prints that credential, writes an audit receipt, and is
+idempotent. Credential values remain outside Git and public output.
 
 ## Governed Hostinger operations
 
@@ -91,12 +121,15 @@ Deploy accepts only an exact commit already contained in canonical GitHub
 generates the archive itself, applies extraction quotas, and binds container
 health to both the Compose API service and the expected release SHA.
 
-See `docs/HOSTINGER_OPERATIONS_RUNBOOK.md`, `docs/RECOVERY.md`, and
-`SECURITY.md` before installation or production activation.
+See `docs/HOSTINGER_OPERATIONS_RUNBOOK.md`, `docs/DEPLOYMENT_SOP.md`,
+`docs/RAILWAY_STAGING_SOP.md`, `docs/MODEL_ROUTING_SOP.md`,
+`docs/RECOVERY.md`, `docs/PORTER_SOP.md`, and `SECURITY.md` before production activation.
 
 ## Security boundary
 
-The authenticated application API remains private. The production proxy publishes only
-`/healthz` over HTTPS and returns `404` for every other public path. PostgreSQL,
-the operations interface, Mission Control state, Docker control, and deferred
-AI administration are not exposed publicly.
+The production proxy publishes the LANSEIR product and `/healthz` over HTTPS.
+Doctrine, registries, Mission Control, admin/content-source endpoints,
+PostgreSQL, Docker control, and operations state remain internal. The default
+Guide is local and provider-free. LiteLLM/OpenRouter activation remains blocked
+until credentials, service health, routing policy, and provider provenance are
+validated without exposing secrets.

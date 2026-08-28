@@ -17,10 +17,18 @@
 - Private application, internal, operations, and data networks
 - No database, Docker socket, Mission Control admin surface, or AI admin endpoint exposed publicly
 - Unprivileged read-only API container with dropped Linux capabilities
-- Public HTTPS boundary limited to `/healthz`
+- Public HTTPS boundary limited to `/healthz` and the allowlisted LANSEIR product routes
+- Explicit, verified, allowlisted administrator promotion; signup never grants admin
+- Canonical-source SHA-256 enforcement before protected VESSEL content publication
+- Bounded in-memory rate-limit state with normalized route categories
 - Secrets excluded from Git, images, ordinary backups, state, and audit summaries
 - Semantic secret preflight rejects placeholders, interpolation, weak/repeated
   credentials, duplicate identities, inconsistent database URLs, and unsafe file metadata
+- Gateway service identity is resolved from the bearer token, never from request data
+- Gateway receipts retain request SHA-256 instead of full content by default
+- Capability adapters report availability without exposing tokens, SSH targets, or secret values
+- Protected execution-state changes require Founder authority and optimistic revision match
+- Railway staging and Hostinger production remain separate approval and capability boundaries
 
 ## Live Invictus acceptance
 
