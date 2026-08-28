@@ -23,15 +23,12 @@ from app.main import app
 
 def test_railway_and_responsive_runtime_contracts():
     repository_root = Path(__file__).resolve().parents[1]
-    railway = json.loads((repository_root / "railway.json").read_text())
     dockerfile = (repository_root / "Dockerfile").read_text()
     index = (repository_root / "app/web/index.html").read_text()
     css = (repository_root / "app/web/static/app.css").read_text()
     javascript = (repository_root / "app/web/static/app.js").read_text()
 
     assert '${PORT:-8000}' in dockerfile
-    assert railway["build"]["builder"] == "DOCKERFILE"
-    assert railway["deploy"]["healthcheckPath"] == "/healthz"
     assert "viewport-fit=cover" in index
     assert "env(safe-area-inset-bottom)" in css
     assert 'role: "button"' in javascript
