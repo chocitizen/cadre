@@ -6,6 +6,7 @@
 - Canonical baseline version: 0.1.0
 - Hostinger operations candidate: 0.2.0
 - Autonomous platform candidate: 0.3.0
+- Universal Prompt Gateway candidate: 0.4.0
 - Status: Locally validated candidate; protected-main review and production acceptance pending
 - Promotion date: 2026-08-26
 - Source package: `CADRE_M1_Sovereign_Core_Foundation_v0.1.0.zip`
@@ -20,6 +21,12 @@ evidence-gated mission execution, deterministic recovery/FIX, canonical-content
 provenance, and Porter lifecycle records. The verified foundation package is
 preserved byte-for-byte under `provenance/` and enforced by
 `scripts/validate_foundation_sync.py`.
+
+The 0.4.0 candidate extends the current M2 execution architecture with a
+Universal Prompt Gateway, versioned cross-interface execution state, durable
+short-command semantics, specialist-authority assembly, Al capability adapters,
+and governed Railway staging/model-routing boundaries. It preserves the existing
+Command Brief and Mission Control state machines and does not promote production.
 
 ## Controlled installation changes
 
@@ -64,6 +71,11 @@ remain blocked until host access and production inputs are verified.
 ARC model routing remains disabled until a separately validated LiteLLM service
 and provider credentials are present. Repository implementation is not evidence
 of live Hostinger installation or production readiness.
+
+Railway staging also remains externally gated until the runtime proves the CLI,
+project binding, credential, environment configuration, deployment URL, HTTP
+health, and responsive rendering. No Railway deployment is claimed by the 0.4.0
+repository candidate alone.
 
 The 2026-08-28 operations proposal adds a canonical-Git deployment controller,
 release-bound health, write-ahead auditing, bounded backups, and production

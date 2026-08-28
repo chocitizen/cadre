@@ -9,6 +9,7 @@ MIGRATIONS = (
     "20260826_01_fastapi_m1",
     "20260828_01_lanseir_product_spine",
     "20260828_02_mission_execution_and_provenance",
+    "20260828_03_universal_prompt_gateway",
 )
 
 

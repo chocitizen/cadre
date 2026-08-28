@@ -137,6 +137,16 @@ def dispatch_next(db: Session) -> Mission | None:
     item = next((candidate for candidate in candidates if dependencies_satisfied(db, candidate)), None)
     if item is None:
         return None
+    return dispatch_mission(db, item)
+
+
+def dispatch_mission(db: Session, item: Mission) -> Mission:
+    if item.status != MissionStatus.queued:
+        raise HTTPException(status_code=409, detail="Only queued missions may be dispatched")
+    if item.command_brief.status not in {BriefStatus.approved, BriefStatus.active}:
+        raise HTTPException(status_code=409, detail="Only approved objectives may be dispatched")
+    if not dependencies_satisfied(db, item):
+        raise HTTPException(status_code=409, detail="Mission dependencies are not verified")
     return _dispatch(db, item)
 
 

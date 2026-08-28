@@ -78,6 +78,14 @@ class ArtifactState(str, enum.Enum):
     archived = "archived"
 
 
+class GatewayStatus(str, enum.Enum):
+    resolved = "resolved"
+    awaiting_approval = "awaiting_approval"
+    dispatched = "dispatched"
+    completed = "completed"
+    blocked = "blocked"
+
+
 class DoctrineEntry(Base):
     __tablename__ = "doctrine_entries"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -381,6 +389,46 @@ class AgentRun(Base):
     usage: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ExecutionState(Base):
+    """Versioned runtime state that survives interfaces and process restarts."""
+
+    __tablename__ = "execution_states"
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_by: Mapped[str] = mapped_column(String(80), default="system")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class GatewayRequest(Base):
+    """A privacy-aware audit receipt for one gateway resolution."""
+
+    __tablename__ = "gateway_requests"
+    __table_args__ = (Index("ix_gateway_requests_created", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    request_record: Mapped[str] = mapped_column(Text)
+    request_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    command_key: Mapped[str] = mapped_column(String(80), index=True)
+    resolved_intent: Mapped[str] = mapped_column(Text)
+    interface: Mapped[str] = mapped_column(String(80), default="api")
+    actor_role: Mapped[str] = mapped_column(String(80))
+    status: Mapped[GatewayStatus] = mapped_column(Enum(GatewayStatus), default=GatewayStatus.resolved, index=True)
+    active_context: Mapped[dict] = mapped_column(JSON, default=dict)
+    specialist_plan: Mapped[dict] = mapped_column(JSON, default=dict)
+    capability_plan: Mapped[list] = mapped_column(JSON, default=list)
+    actions_attempted: Mapped[list] = mapped_column(JSON, default=list)
+    actions_completed: Mapped[list] = mapped_column(JSON, default=list)
+    validation: Mapped[list] = mapped_column(JSON, default=list)
+    blockers: Mapped[list] = mapped_column(JSON, default=list)
+    artifacts: Mapped[list] = mapped_column(JSON, default=list)
+    commit_identifier: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    deployment_identifier: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    next_executable_action: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class Mission(Base):

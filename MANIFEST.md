@@ -1,6 +1,6 @@
-# CADRE M1 — Sovereign Core Foundation
+# LANSEIR M3 — Universal Execution Gateway
 
-Version: 0.3.0
+Version: 0.4.0
 Status: Locally validated LANSEIR platform candidate; remote/live gates pending
 Package rule: extract directly at the CADRE project root; no wrapper directory is required.
 
@@ -37,10 +37,16 @@ Promotion and rollback provenance are recorded in `CANONICAL_STATUS.md`.
 - Mission artifacts with Porter install/register/archive/cleanup receipts
 - Approved-source hashes and per-chapter provenance for protected VESSEL content
 - Byte-verified LANSEIR/CADRE foundation records and repository registry
+- Universal Prompt Gateway with durable command semantics and context packets
+- Persistent versioned execution state and privacy-aware gateway audit receipts
+- Specialist-authority routing and Al sovereign engineering operator charter
+- Capability-discovering GitHub, Railway, OpenRouter, LiteLLM, and Hostinger adapters
+- Railway staging, model-routing, security, provenance, and recovery SOPs
 
 ## Deliberately deferred or externally gated
 
 - Live LiteLLM / OpenRouter provider activation
+- Live Railway project binding, deployment, URL, and responsive acceptance
 - Remote AI/model execution and credential validation
 - Institutional memory promotion engine
 - Protected-main approval and merge
@@ -73,3 +79,7 @@ delivery require live VPS access and cannot be claimed from repository tests.
 16. Protected content cannot be published without an approved canonical source and matching chapter hashes.
 17. Porter refuses source cleanup until destination and archive evidence exist and at least one other registered copy remains.
 18. Foundation package hashes and Source-of-Truth registry membership validate without drift.
+19. Short founder commands resolve against canonical state and never infer missing approval.
+20. Gateway receipts, state revisions, specialist plans, blockers, and next actions persist.
+21. Service adapters never claim capability from a service name or expose credentials.
+22. Railway staging cannot dispatch without proven adapter capability and an approved deployment mission.

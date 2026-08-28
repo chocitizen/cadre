@@ -1,0 +1,1 @@
+"""Versioned LANSEIR gateway resources."""

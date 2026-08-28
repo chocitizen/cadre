@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "active_project": "lanseir-platform",
+  "current_milestone": "M3 — Universal Prompt Gateway",
+  "current_objective": "Resolve founder commands against canonical LANSEIR state before governed execution.",
+  "approved_decisions": [
+    {
+      "decision": "LANSEIR is the sovereign parent and CADRE is the internal execution system.",
+      "authority": "Canonical LANSEIR/CADRE foundation"
+    },
+    {
+      "decision": "Production promotion remains distinct from staging validation.",
+      "authority": "Deployment governance"
+    }
+  ],
+  "locked_assets": [
+    "source_of_truth_registry.json",
+    "00_governance/lanseir_identity_charter.md",
+    "00_governance/promotion_rule.md"
+  ],
+  "work_in_progress": [],
+  "completed_work": [
+    "M2 evidence-gated Mission Control and LANSEIR product spine"
+  ],
+  "blocked_work": [],
+  "next_executable_work": null,
+  "assigned_agents": [],
+  "deployment_state": {
+    "railway_staging": "not_configured",
+    "hostinger_production": "not_promoted"
+  },
+  "environment_state": {
+    "canonical_runtime": "FastAPI",
+    "persistence": "SQLAlchemy"
+  },
+  "relevant_services": [
+    "github",
+    "railway",
+    "openrouter",
+    "litellm",
+    "hostinger"
+  ],
+  "last_validated_commit": null,
+  "last_deployment": null,
+  "rollback_reference": "archive/pre-lanseir-autonomy-2026-08-28"
+}

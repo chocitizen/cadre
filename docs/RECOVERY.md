@@ -13,6 +13,12 @@ increments the retry counter and cannot exceed the mission retry ceiling.
 Authorization, policy, and unresolved dependency failures remain blocked for a
 real authority or dependency change; FIX does not bypass controls.
 
+Gateway failures preserve their request receipt and execution-state revision.
+Blocked output names the required capability, permission or credential,
+affected service, exact human action, and resume command. Resumption reloads the
+canonical context rather than restarting discovery. Gateway FIX never bypasses
+an approval, lock, protected branch, or unavailable adapter.
+
 ## Release rollback
 
 `cadre-ops deploy` preserves the former current release as `previous` before

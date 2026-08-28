@@ -72,8 +72,8 @@ def health() -> dict:
     return {
         "status": "ok",
         "system": "CADRE",
-        "milestone": "M2",
-        "version": "0.3.0",
+        "milestone": "M3",
+        "version": "0.4.0",
         "release": settings.release_id,
     }
 

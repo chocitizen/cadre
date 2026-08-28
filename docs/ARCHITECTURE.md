@@ -15,6 +15,18 @@ Browser
 LANSEIR owns the customer experience. CADRE owns internal orchestration,
 specialist definitions, run state, service registries, and operations truth.
 
+Authorized operational interfaces enter through the Universal Prompt Gateway:
+
+```text
+raw input -> service identity -> command semantics -> canonical context
+  -> doctrine + approvals/locks -> specialist assembly -> adapter capability
+  -> governed action -> evidence/validation -> state + provenance -> next action
+```
+
+The gateway writes to the existing Command Brief, Mission Control, audit, and
+execution-state records. It does not maintain a parallel task graph. See
+`docs/UNIVERSAL_PROMPT_GATEWAY.md`.
+
 ## Identity boundary
 
 Passwords use salted scrypt. The browser receives an opaque HttpOnly session
@@ -23,10 +35,11 @@ the CSRF value in `X-CSRF-Token`. The database stores only SHA-256 session and
 CSRF token hashes. Admin authorization is enforced server-side. Account export
 and deletion are authenticated operations.
 
-Service-role bearer tokens are a separate machine boundary. Doctrine reads are
-limited to Mission Control, Al, and Griot. Project, command-brief, and operations
-state reads are limited to Mission Control and Al. Only Mission Control and Al
-write registry records.
+Service-role bearer tokens are a separate machine boundary. The Founder role
+may approve exact gateway references and alter protected execution state.
+Doctrine reads are limited to Mission Control, Al, and Griot. Project,
+command-brief, and operations state reads are limited to authorized operating
+roles. Mission Control and Al retain bounded registry-write authority.
 
 ## Product domains
 

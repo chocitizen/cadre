@@ -28,12 +28,12 @@
   },
   "al": {
     "name": "Al",
-    "role": "platform engineering, improvement, and automation",
+    "role": "sovereign engineering, repository operations, platform improvement, and automation",
     "actions": ["status", "health", "deploy", "validate", "restart", "logs", "release-current", "release-history"],
     "service_targets": ["api", "proxy"],
-    "capabilities": ["build", "test", "deploy", "validate"],
+    "capabilities": ["repository-administration", "build", "test", "staging", "deploy", "validate", "rollback-preparation", "adapter-discovery"],
     "model_policy": "local-first; economical external routing; premium escalation by policy",
-    "tools": ["cadre-ops", "docker-compose-via-policy"],
+    "tools": ["cadre-ops", "docker-compose-via-policy", "gateway-adapters"],
     "status": "AVAILABLE"
   },
   "arc": {

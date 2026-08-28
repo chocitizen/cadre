@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     public_url: str = "http://127.0.0.1:8000"
     session_days: int = 30
     admin_emails: str = ""
+    gateway_state_key: str = "canonical"
+    github_repository: str = ""
+    github_token: str = ""
+    railway_project_id: str = ""
+    railway_environment: str = "staging"
+    railway_token: str = ""
+    hostinger_ssh_host: str = ""
+    hostinger_operations_enabled: bool = False
+    last_validated_commit: str = ""
+    rollback_reference: str = "archive/pre-lanseir-autonomy-2026-08-28"
     ai_provider: str = "local"
     ai_model: str = "lanseir-reflection-v1"
     ai_base_url: str = "https://api.openai.com/v1"

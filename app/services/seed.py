@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.entities import Book, ContentState, DoctrineEntry, Specialist, Voyage, VoyageLesson
+from app.models.entities import Book, ContentState, DoctrineEntry, ExecutionState, Project, Specialist, Voyage, VoyageLesson
+from app.services.gateway import default_execution_state
 
 SEED_DOCTRINE = [
     ("majestic-standard", "Majestic is the standard", "Favor premium, authentic, refined, durable, intentional, high-quality outcomes over merely adequate alternatives.", "governing_standard"),
@@ -25,7 +26,24 @@ SPECIALISTS = [
     ("invictus", "Invictus", "Security review and risk validation", ["security_review"], ["security", "privacy", "authorization"], ["finding_validated", "counterevidence_checked"]),
     ("porter", "Porter", "Maintenance and system housekeeping", ["maintenance"], ["cleanup", "dependency", "drift"], ["tests_pass", "rollback_available"]),
     ("griot", "Griot", "Provenance, audit, and canonical record stewardship", ["audit", "provenance"], ["source", "history", "record"], ["source_cited", "receipt_recorded"]),
-    ("al", "Al", "Synthesis and durable improvement", ["improvement", "workflow"], ["improve", "synthesize", "optimize"], ["value_demonstrated", "complexity_justified"]),
+    (
+        "al",
+        "Al",
+        "LANSEIR sovereign engineering and repository operator",
+        [
+            "repository_administration",
+            "codebase_maintenance",
+            "ci_cd",
+            "deployment_staging",
+            "build_and_test",
+            "dependency_management",
+            "integration_routing",
+            "operational_diagnostics",
+            "rollback_preparation",
+        ],
+        ["engineering", "repository", "build", "test", "deploy", "automation", "integration", "recovery"],
+        ["tests_pass", "secrets_preserved", "rollback_available", "material_evidence_recorded"],
+    ),
     ("liv", "Liv", "Personal and client operations", ["client_operations"], ["personal", "client", "journey"], ["privacy_preserved", "next_action_clear"]),
     ("harv", "Harv", "Business operations and execution", ["business_operations"], ["business", "launch", "operations"], ["owner_identified", "result_measurable"]),
     ("concierge", "Concierge", "Procurement and integration coordination", ["procurement", "integration"], ["procure", "vendor", "connect"], ["authority_confirmed", "exit_path_documented"]),
@@ -33,6 +51,27 @@ SPECIALISTS = [
 
 
 def seed_product(db: Session) -> None:
+    if db.scalar(select(Project).where(Project.slug == "lanseir-platform")) is None:
+        db.add(
+            Project(
+                slug="lanseir-platform",
+                name="LANSEIR Platform",
+                description="Sovereign parent platform with CADRE as the internal execution system.",
+                source_of_truth={
+                    "registry": "source_of_truth_registry.json",
+                    "doctrine": "00_governance/",
+                    "locked_assets": [
+                        "source_of_truth_registry.json",
+                        "00_governance/lanseir_identity_charter.md",
+                        "00_governance/promotion_rule.md",
+                    ],
+                },
+            )
+        )
+
+    if db.get(ExecutionState, "canonical") is None:
+        db.add(ExecutionState(key="canonical", payload=default_execution_state(), updated_by="system"))
+
     if db.scalar(select(Book).where(Book.slug == "vessel-mastering-the-ship-of-self")) is None:
         db.add(
             Book(
@@ -47,7 +86,8 @@ def seed_product(db: Session) -> None:
         )
 
     for key, name, responsibility, permissions, routing, validation in SPECIALISTS:
-        if db.scalar(select(Specialist).where(Specialist.key == key)) is None:
+        specialist = db.scalar(select(Specialist).where(Specialist.key == key))
+        if specialist is None:
             db.add(
                 Specialist(
                     key=key,
@@ -58,6 +98,13 @@ def seed_product(db: Session) -> None:
                     validation_requirements=validation,
                 )
             )
+        elif key == "al":
+            specialist.name = name
+            specialist.responsibility = responsibility
+            specialist.permissions = permissions
+            specialist.routing_criteria = routing
+            specialist.validation_requirements = validation
+            specialist.is_active = True
 
     voyage = db.scalar(select(Voyage).where(Voyage.slug == "first-crossing"))
     if voyage is None:

@@ -9,12 +9,14 @@
    application import, JavaScript syntax, operations tests, and secret/path scans.
 4. Commit only reviewed source, policy, tests, and documentation. Exclude local
    credentials, databases, caches, reports, packages, and private production data.
-5. Push the exact commit and independently confirm remote `main` resolves to it.
-6. Require the governed controller to fetch that exact SHA from canonical `main`.
-7. Validate container health and the release ID before switching live traffic.
-8. Confirm approved LANSEIR product routes work over HTTPS and internal/admin
+5. Push the exact candidate commit and independently confirm the remote branch resolves to it.
+6. Deploy the candidate to Railway staging under `docs/RAILWAY_STAGING_SOP.md`.
+7. Record and verify the responsive staging URL without promoting production.
+8. After protected-main approval, require the governed controller to fetch that exact SHA from canonical `main`.
+9. Validate container health and the release ID before switching live traffic.
+10. Confirm approved LANSEIR product routes work over HTTPS and internal/admin
    paths are not public.
-9. Verify backup, archive integrity, isolated restore, audit chain, and security
+11. Verify backup, archive integrity, isolated restore, audit chain, and security
    acceptance. Record live evidence; repository tests are not deployment proof.
 
 ## Rollback
@@ -26,8 +28,10 @@ its replacement are preserved.
 
 ## Current external dependencies
 
-GitHub publication requires a visible, accessible repository named exactly
-`lanseir`. Hostinger activation requires verified VPS access, DNS, TLS, firewall,
+GitHub publication requires authenticated access to the configured canonical
+repository and protected-main approval. Railway staging requires the CLI,
+project binding, runtime credential, environment configuration, and live URL
+acceptance. Hostinger activation requires verified VPS access, DNS, TLS, firewall,
 root-owned policy installation, production secrets, and live acceptance.
 LiteLLM/OpenRouter activation requires a healthy internal gateway, server-side
 credentials, explicit routing policy, provider provenance, and failure-path tests.

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.product import router as product_router
 from app.api.routes import router as core_router
+from app.api.gateway import router as gateway_router
 from app.core.config import get_settings
 from app.core.middleware import RateLimitMiddleware, RequestBodyLimitMiddleware, RequestContextMiddleware
 from app.db.migrations import run_migrations
@@ -35,7 +36,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.3.0",
+    version="0.4.0",
     description="LANSEIR product experience with the CADRE operating system",
     docs_url=None if settings.env == "production" else "/docs",
     redoc_url=None if settings.env == "production" else "/redoc",
@@ -47,6 +48,7 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=settings.auth_rate_l
 app.add_middleware(RequestContextMiddleware, environment=settings.env)
 app.include_router(core_router, prefix=settings.api_prefix)
 app.include_router(product_router, prefix=settings.api_prefix)
+app.include_router(gateway_router, prefix=settings.api_prefix)
 app.mount("/static", StaticFiles(directory=web_root / "static"), name="static")
 
 

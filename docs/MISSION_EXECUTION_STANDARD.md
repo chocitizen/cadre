@@ -7,6 +7,11 @@ Mission Control may route only approved Command Briefs to active specialists.
 Specialists remain bounded by their registered permissions, dependencies,
 validation requirements, and service identities.
 
+Operational inputs first pass through the Universal Prompt Gateway. Unknown
+substantive requests become draft Command Briefs; short commands may dispatch
+only already-approved, dependency-ready missions. Gateway resolution does not
+weaken mission evidence or verification gates.
+
 ## Canonical execution sequence
 
 1. Translate an approved Command Brief into bounded missions with named outputs,

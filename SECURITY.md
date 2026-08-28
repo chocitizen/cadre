@@ -24,6 +24,11 @@
 - Secrets excluded from Git, images, ordinary backups, state, and audit summaries
 - Semantic secret preflight rejects placeholders, interpolation, weak/repeated
   credentials, duplicate identities, inconsistent database URLs, and unsafe file metadata
+- Gateway service identity is resolved from the bearer token, never from request data
+- Gateway receipts retain request SHA-256 instead of full content by default
+- Capability adapters report availability without exposing tokens, SSH targets, or secret values
+- Protected execution-state changes require Founder authority and optimistic revision match
+- Railway staging and Hostinger production remain separate approval and capability boundaries
 
 ## Live Invictus acceptance
 

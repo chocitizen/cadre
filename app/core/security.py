@@ -15,6 +15,7 @@ from app.services.identity import require_csrf, resolve_session
 
 
 KNOWN_ROLES = {
+    "founder",
     "mission_control",
     "al",
     "arc",
@@ -27,8 +28,9 @@ WRITE_ROLES = frozenset({"mission_control", "al"})
 DOCTRINE_READ_ROLES = frozenset({"mission_control", "al", "griot"})
 REGISTRY_READ_ROLES = frozenset({"mission_control", "al", "griot"})
 OPERATIONS_READ_ROLES = frozenset({"mission_control", "al"})
-MISSION_READ_ROLES = frozenset({"mission_control", "al", "invictus", "porter", "griot", "sentinel"})
+MISSION_READ_ROLES = frozenset({"founder", "mission_control", "al", "invictus", "porter", "griot", "sentinel"})
 MISSION_WRITE_ROLES = frozenset({"mission_control", "al"})
+GATEWAY_WRITE_ROLES = frozenset({"founder", "mission_control", "al"})
 PORTER_WRITE_ROLES = frozenset({"mission_control", "porter"})
 MISSION_VERIFY_ROLES = frozenset({"mission_control", "griot"})
 
@@ -115,6 +117,8 @@ require_mission_write = require_roles(*sorted(MISSION_WRITE_ROLES))
 require_porter_write = require_roles(*sorted(PORTER_WRITE_ROLES))
 require_mission_verify = require_roles(*sorted(MISSION_VERIFY_ROLES))
 require_admin_promotion = require_roles("mission_control")
+require_gateway_read = require_roles(*sorted(MISSION_READ_ROLES))
+require_gateway_write = require_roles(*sorted(GATEWAY_WRITE_ROLES))
 
 
 def require_user(request: Request, db: Session = Depends(get_db)) -> User:

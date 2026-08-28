@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - feat/cadre-platform-foundation
+      - "feat/**"
   workflow_dispatch:
 
 permissions:
@@ -46,6 +46,7 @@ jobs:
           .venv/bin/python -m pytest -q -p no:cacheprovider
           .venv/bin/python -m mypy --cache-dir=/dev/null app
           .venv/bin/python -m pip check
+          .venv/bin/python -m pip wheel . --no-deps --wheel-dir /tmp/lanseir-wheel
           .venv/bin/python -m pip_audit -r requirements.lock --require-hashes --disable-pip --progress-spinner off
           .venv/bin/python -m compileall -q app scripts
           node --check app/web/static/app.js

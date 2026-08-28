@@ -11,7 +11,7 @@ os.environ["CADRE_DATABASE_URL"] = f"sqlite:///{test_database_path}"
 os.environ["CADRE_OPERATIONS_STATE_PATH"] = str(Path(test_database_directory.name) / "operations.json")
 api_tokens = {
     role: hashlib.sha256(f"cadre-test-token:{role}".encode()).hexdigest()
-    for role in ("mission_control", "al", "invictus", "porter", "griot", "sentinel")
+    for role in ("founder", "mission_control", "al", "invictus", "porter", "griot", "sentinel")
 }
 os.environ["CADRE_API_TOKENS_JSON"] = json.dumps(api_tokens)
 os.environ["CADRE_ADMIN_EMAILS"] = "admin@example.com"
@@ -34,6 +34,19 @@ def test_health_and_core_crud():
         health = client.get("/api/v1/health")
         assert health.status_code == 200
         assert health.json()["status"] == "ok"
+
+        assert client.get("/api/v1/gateway/commands").status_code == 401
+        command_registry = client.get("/api/v1/gateway/commands", headers=mission_control)
+        assert command_registry.status_code == 200
+        assert any(item["key"] == "actively_advance" for item in command_registry.json()["commands"])
+        gateway_status = client.post(
+            "/api/v1/gateway/resolve",
+            headers=mission_control,
+            json={"raw_input": "Status"},
+        )
+        assert gateway_status.status_code == 200
+        assert gateway_status.json()["status"] == "completed"
+        assert gateway_status.json()["active_context"]["active_project"]["slug"] == "lanseir-platform"
 
         assert client.get("/api/v1/operations/state").status_code == 401
         operations = client.get("/api/v1/operations/state", headers=mission_control)
@@ -88,6 +101,7 @@ def test_api_roles_and_resource_bounds():
     with TestClient(app) as client:
         reader = {"Authorization": f"Bearer {api_tokens['griot']}"}
         writer = {"Authorization": f"Bearer {api_tokens['al']}"}
+        founder = {"Authorization": f"Bearer {api_tokens['founder']}"}
 
         assert client.get("/api/v1/projects", headers=reader).status_code == 200
         denied = client.post(
@@ -96,6 +110,16 @@ def test_api_roles_and_resource_bounds():
             json={"slug": "forbidden", "name": "Forbidden"},
         )
         assert denied.status_code == 403
+        assert client.post(
+            "/api/v1/projects",
+            headers=founder,
+            json={"slug": "founder-direct-write", "name": "Founder Direct Write"},
+        ).status_code == 403
+        assert client.post(
+            "/api/v1/gateway/resolve",
+            headers=founder,
+            json={"raw_input": "Status"},
+        ).status_code == 200
 
         oversized_field = client.post(
             "/api/v1/projects",

@@ -61,6 +61,9 @@ uvicorn app.main:app --reload
 - Private CADRE: doctrine, projects, Command Briefs, Mission Control, specialist
   dispatch, evidence verification, recovery/FIX, provenance, and Porter
   lifecycle records.
+- Universal Prompt Gateway: persistent context packets, durable short-command
+  semantics, approval/lock resolution, specialist-authority assembly, Al service
+  capability discovery, governed dispatch, exact blockers, and audit receipts.
 - Minimal public health: `GET /api/v1/health` and the proxy alias `/healthz`.
 
 Product routes use secure server sessions and CSRF protection for mutations.
@@ -74,6 +77,12 @@ Mission completion is evidence-gated. Status messages do not count as progress;
 failed, blocked, stalled, or verification-failed missions expose FIX. A
 deterministic failure dispatches an Al recovery mission before the bounded retry
 of the original action. See `docs/MISSION_EXECUTION_STANDARD.md`.
+
+Authorized interfaces use `POST /api/v1/gateway/resolve`; `STATUS`, `SIGNAL`,
+`NOW`, `GO`, `ADVANCE`, `ACT`, `ACTIVELY ADVANCE`, `DEPLOY`, `+`, and
+`YOU KNOW WHAT TO DO` are resolved against canonical state rather than treated
+as isolated chat prompts. See `docs/UNIVERSAL_PROMPT_GATEWAY.md` and
+`docs/AL_OPERATOR_CHARTER.md`.
 
 ## Governed Hostinger operations
 
@@ -99,8 +108,8 @@ generates the archive itself, applies extraction quotas, and binds container
 health to both the Compose API service and the expected release SHA.
 
 See `docs/HOSTINGER_OPERATIONS_RUNBOOK.md`, `docs/DEPLOYMENT_SOP.md`,
-`docs/RECOVERY.md`, `docs/PORTER_SOP.md`, and `SECURITY.md` before production
-activation.
+`docs/RAILWAY_STAGING_SOP.md`, `docs/MODEL_ROUTING_SOP.md`,
+`docs/RECOVERY.md`, `docs/PORTER_SOP.md`, and `SECURITY.md` before production activation.
 
 ## Security boundary
 
