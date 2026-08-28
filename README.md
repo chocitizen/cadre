@@ -13,7 +13,7 @@ From the CADRE project root after extracting this package:
 cp .env.example .env
 ```
 
-Replace `change_me` in ignored `.env` with one strong database password in
+Replace `replace_with_*` in ignored `.env` with one strong database password in
 both `CADRE_DB_PASSWORD` and the URL-encoded password inside
 `CADRE_DATABASE_URL`. Replace every API token placeholder with a different
 random value of at least 32 characters. Do not edit tracked Compose policy or
@@ -34,6 +34,7 @@ Validate:
 Open:
 
 ```text
+http://127.0.0.1:8000/
 http://127.0.0.1:8000/docs
 ```
 
@@ -46,9 +47,9 @@ SSH tunnel or a separately approved HTTPS reverse proxy; do not publish port
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e '.[dev]'
+python -m pip install -e '.[dev]'
 export CADRE_DATABASE_URL='sqlite:///./cadre.db'
-pytest -q
+./scripts/validate.sh
 uvicorn app.main:app --reload
 ```
 

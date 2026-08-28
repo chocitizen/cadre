@@ -6,7 +6,7 @@
 - Canonical baseline version: 0.1.0
 - Hostinger operations candidate: 0.2.0
 - Autonomous platform candidate: 0.3.0
-- Status: Locally validated candidate; remote promotion and production acceptance blocked
+- Status: Locally validated candidate; protected-main review and production acceptance pending
 - Promotion date: 2026-08-26
 - Source package: `CADRE_M1_Sovereign_Core_Foundation_v0.1.0.zip`
 - Verified source SHA-256: `24382898e4990a19f3d21fe9fc30cf6b4df0313dd0e8a20b19f3ac42674e387c`
@@ -54,12 +54,12 @@ approval for the configured GitHub destination.
 
 ## External gates
 
-The requested GitHub repository named exactly `lanseir` was not visible to the
-authenticated `chocitizen` account on 2026-08-28. The existing `cadre` remote is
-preserved; it is not silently repointed. Remote push, branch protection,
-GitHub-hosted CI, Hostinger deployment, DNS/HTTPS acceptance, off-server backup,
-and live restore evidence remain blocked until the repository and host access
-are verified.
+The configured private `chocitizen/cadre` remote is preserved; it was not
+silently repointed. Candidate branch `feat/lanseir-m2-completion` is published,
+and protected pull request #1 is open. GitHub
+requires an independent approving review before promotion to `main`. Hostinger
+deployment, DNS/HTTPS acceptance, off-server backup, and live restore evidence
+remain blocked until host access and production inputs are verified.
 
 ARC model routing remains disabled until a separately validated LiteLLM service
 and provider credentials are present. Repository implementation is not evidence
@@ -67,5 +67,6 @@ of live Hostinger installation or production readiness.
 
 The 2026-08-28 operations proposal adds a canonical-Git deployment controller,
 release-bound health, write-ahead auditing, bounded backups, and production
-secret preflight. These changes remain proposed until the verified commit is
-published to GitHub `main` and the live Hostinger acceptance sequence passes.
+secret preflight. These changes remain proposed until the protected pull
+request is approved and merged to GitHub `main`, then the live Hostinger
+acceptance sequence passes.

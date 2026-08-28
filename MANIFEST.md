@@ -43,9 +43,9 @@ Promotion and rollback provenance are recorded in `CANONICAL_STATUS.md`.
 - Live LiteLLM / OpenRouter provider activation
 - Remote AI/model execution and credential validation
 - Institutional memory promotion engine
-- Remote repository publication and branch protection
+- Protected-main approval and merge
 - Ready Dock / notifications
-- VESSEL application integration
+- Authorized VESSEL manuscript/audio ingestion and publication
 
 ARC remains represented but blocked until an approved LiteLLM/model-routing
 service is installed and explicitly enabled. Hostinger installation, HTTPS,

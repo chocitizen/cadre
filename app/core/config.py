@@ -16,9 +16,6 @@ class Settings(BaseSettings):
     public_url: str = "http://127.0.0.1:8000"
     session_days: int = 30
     admin_emails: str = ""
-    mail_webhook_url: str = ""
-    mail_webhook_token: str = ""
-    support_email: str = "support@lanseir.com"
     ai_provider: str = "local"
     ai_model: str = "lanseir-reflection-v1"
     ai_base_url: str = "https://api.openai.com/v1"

@@ -47,6 +47,9 @@ jobs:
           .venv/bin/python -m mypy --cache-dir=/dev/null app
           .venv/bin/python -m pip check
           .venv/bin/python -m pip_audit -r requirements.lock --require-hashes --disable-pip --progress-spinner off
+          .venv/bin/python -m compileall -q app scripts
+          node --check app/web/static/app.js
+          git diff --check
           bash -n ops/install.sh
           sh -n scripts/cadre-ops ops/config/cadre-ops-root
           python -m json.tool ops/config/roles.json >/dev/null
@@ -54,5 +57,6 @@ jobs:
           python -m json.tool ops/config/services.json >/dev/null
           python -m json.tool ops/config/limits.json >/dev/null
           python -m json.tool ops/config/repository.json >/dev/null
+          docker compose --env-file .env.example config --quiet
           docker compose --env-file ops/config/cadre.env.example -f ops/config/docker-compose.prod.yml config --quiet
           docker build -f ops/config/Dockerfile.prod -t cadre:${GITHUB_SHA} .
