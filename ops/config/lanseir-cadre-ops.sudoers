@@ -1,0 +1,1 @@
+%lanseir-ops ALL=(root) NOPASSWD: /opt/lanseir/scripts/cadre-ops *

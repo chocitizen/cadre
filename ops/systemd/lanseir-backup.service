@@ -1,0 +1,20 @@
+[Unit]
+Description=LANSEIR Porter governed backup
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Environment=SUDO_USER=lanseir-porter
+ExecStart=/opt/lanseir/scripts/cadre-ops backup
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/lanseir/cadre/state /opt/lanseir/logs /opt/lanseir/backups
+MemoryMax=512M
+CPUQuota=100%
+TasksMax=64
+TimeoutStartSec=30min

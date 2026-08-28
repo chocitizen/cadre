@@ -1,7 +1,7 @@
 [project]
 name = "cadre-core"
-version = "0.1.0"
-description = "CADRE Milestone 1 — Sovereign Core Foundation"
+version = "0.2.0"
+description = "CADRE Milestone 1 — Sovereign Core with governed operations"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.116,<1.0",
@@ -13,8 +13,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.4,<9.0",
+  "pytest>=9.0.3,<10.0",
   "httpx>=0.28,<1.0",
+  "mypy>=1.17,<2.0",
 ]
 
 [build-system]
@@ -27,3 +28,9 @@ include = ["app*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+ignore_missing_imports = true
+pretty = true

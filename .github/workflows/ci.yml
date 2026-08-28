@@ -1,0 +1,58 @@
+name: Validate CADRE operations release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/cadre-platform-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cadre-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install validation dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -e '.[dev]' pip-audit
+
+      - name: Validate application and operations policy
+        env:
+          CADRE_RELEASE_PATH: ${{ github.workspace }}
+          CADRE_RELEASE_ID: ${{ github.sha }}
+          CADRE_DB_PASSWORD: ci_validation_only
+          CADRE_DATABASE_URL: postgresql+psycopg://cadre:ci_validation_only@db:5432/cadre
+          CADRE_PUBLIC_HOST: cadre.invalid
+          CADRE_ACME_EMAIL: ci@example.invalid
+        run: |
+          ./scripts/validate.sh
+          .venv/bin/python -m pytest -q -p no:cacheprovider
+          .venv/bin/python -m mypy app
+          .venv/bin/python -m pip check
+          .venv/bin/python -m pip_audit
+          bash -n ops/install.sh
+          sh -n scripts/cadre-ops ops/config/cadre-ops-root
+          python -m json.tool ops/config/roles.json >/dev/null
+          python -m json.tool ops/config/actors.json >/dev/null
+          python -m json.tool ops/config/services.json >/dev/null
+          python -m json.tool ops/config/limits.json >/dev/null
+          python -m json.tool ops/config/repository.json >/dev/null
+          docker compose --env-file ops/config/cadre.env.example -f ops/config/docker-compose.prod.yml config --quiet
+          docker build -f ops/config/Dockerfile.prod -t cadre:${GITHUB_SHA} .

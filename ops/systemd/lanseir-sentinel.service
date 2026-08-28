@@ -1,0 +1,21 @@
+[Unit]
+Description=LANSEIR Sentinel governed health observation
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=SUDO_USER=lanseir-sentinel
+ExecStart=/opt/lanseir/scripts/cadre-ops system-health
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/lanseir/cadre/state /opt/lanseir/logs
+MemoryMax=128M
+CPUQuota=50%
+TasksMax=32
+TimeoutStartSec=2min

@@ -1,0 +1,18 @@
+{
+  "api": {
+    "enabled": true,
+    "description": "Private CADRE FastAPI service"
+  },
+  "proxy": {
+    "enabled": true,
+    "description": "Public HTTPS health boundary"
+  },
+  "db": {
+    "enabled": true,
+    "description": "Private PostgreSQL persistence service"
+  },
+  "litellm": {
+    "enabled": false,
+    "description": "Deferred AI routing service; enable only after separately validated installation"
+  }
+}

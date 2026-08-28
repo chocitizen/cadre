@@ -1,0 +1,10 @@
+{
+  "root": "mission_control",
+  "lanseir-mission-control": "mission_control",
+  "lanseir-deploy": "al",
+  "lanseir-arc": "arc",
+  "lanseir-invictus": "invictus",
+  "lanseir-porter": "porter",
+  "lanseir-griot": "griot",
+  "lanseir-sentinel": "sentinel"
+}

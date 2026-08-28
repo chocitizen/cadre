@@ -1,6 +1,8 @@
-# CADRE — Milestone 1: Sovereign Core Foundation
+# CADRE — Sovereign Core + Governed Operations
 
-This package establishes the first executable CADRE kernel: persistent doctrine, projects, command briefs, and system health.
+LANSEIR remains the sovereign parent platform. This repository contains the
+canonical CADRE FastAPI core plus the Hostinger operations layer authorized for
+Mission Control, Al, ARC, Invictus, Porter, Griot, and Sentinel.
 
 ## Install
 
@@ -10,7 +12,11 @@ From the CADRE project root after extracting this package:
 cp .env.example .env
 ```
 
-Change the two occurrences of `change_me` in `.env` and `docker-compose.yml` to the same strong database password.
+Replace `change_me` in ignored `.env` with one strong database password in
+both `CADRE_DB_PASSWORD` and the URL-encoded password inside
+`CADRE_DATABASE_URL`. Replace every API token placeholder with a different
+random value of at least 32 characters. Do not edit tracked Compose policy or
+commit the populated file.
 
 Then run:
 
@@ -54,11 +60,43 @@ uvicorn app.main:app --reload
 - `POST /api/v1/projects`
 - `GET /api/v1/command-briefs`
 - `POST /api/v1/command-briefs`
+- `GET /api/v1/operations/state` (private/internal Mission Control read model)
+
+`GET /api/v1/health` is public and intentionally minimal. Every other API route
+requires `Authorization: Bearer <role-token>`. Mission Control and Al tokens
+may write registry records; all configured CADRE role tokens may read them.
+Collection routes use `limit` and `offset`, with a server-enforced maximum of
+100 items per response.
+
+## Governed Hostinger operations
+
+The root-owned `cadre-ops` controller accepts only these named operations:
+
+```text
+status  health  deploy  validate  rollback
+restart <approved-service>  logs <approved-service>
+backup  backup-status  backup-verify  restore-test
+release-current  release-history  system-health
+security-audit  audit-verify
+```
+
+Unix identity maps to a policy role; action names, typed arguments, and service
+targets are allowlisted; arbitrary shell strings are rejected. Mutations write
+a durable intent before execution and a terminal hash-chained receipt after it.
+The ledger uses a constant-time root-owned head checkpoint and a fail-closed
+capacity ceiling.
+
+Deploy accepts only an exact commit already contained in canonical GitHub
+`main`. The root controller fetches the fixed repository, verifies ancestry,
+generates the archive itself, applies extraction quotas, and binds container
+health to both the Compose API service and the expected release SHA.
+
+See `docs/HOSTINGER_OPERATIONS_RUNBOOK.md`, `docs/RECOVERY.md`, and
+`SECURITY.md` before installation or production activation.
 
 ## Security boundary
 
-M1 intentionally does not expose this service as a production public API with
-authentication. Docker Compose binds port 8000 to `127.0.0.1` so it remains
-private to the host until the identity/authentication milestone and an approved
-HTTPS boundary are installed. Do not place this directly on the public internet
-as-is.
+The authenticated application API remains private. The production proxy publishes only
+`/healthz` over HTTPS and returns `404` for every other public path. PostgreSQL,
+the operations interface, Mission Control state, Docker control, and deferred
+AI administration are not exposed publicly.

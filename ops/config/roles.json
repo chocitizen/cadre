@@ -1,0 +1,89 @@
+{
+  "mission_control": {
+    "name": "Mission Control",
+    "role": "orchestration, state, assignments, and deployment status",
+    "actions": [
+      "status",
+      "health",
+      "deploy",
+      "validate",
+      "rollback",
+      "restart",
+      "logs",
+      "backup",
+      "backup-status",
+      "backup-verify",
+      "restore-test",
+      "release-current",
+      "release-history",
+      "system-health",
+      "security-audit",
+      "audit-verify"
+    ],
+    "service_targets": ["api", "proxy", "db"],
+    "capabilities": ["dispatch", "state", "deployment", "validation"],
+    "model_policy": "local-first; external routing only when policy permits",
+    "tools": ["cadre-ops"],
+    "status": "AVAILABLE"
+  },
+  "al": {
+    "name": "Al",
+    "role": "platform engineering, improvement, and automation",
+    "actions": ["status", "health", "deploy", "validate", "restart", "logs", "release-current", "release-history"],
+    "service_targets": ["api", "proxy"],
+    "capabilities": ["build", "test", "deploy", "validate"],
+    "model_policy": "local-first; economical external routing; premium escalation by policy",
+    "tools": ["cadre-ops", "docker-compose-via-policy"],
+    "status": "AVAILABLE"
+  },
+  "arc": {
+    "name": "ARC",
+    "role": "AI infrastructure and governed model routing",
+    "actions": ["status", "health", "logs", "restart", "release-current"],
+    "service_targets": ["litellm"],
+    "capabilities": ["model-health", "routing-configuration", "approved-ai-service-restart"],
+    "model_policy": "local models, then economical external routing, then justified premium escalation",
+    "tools": ["cadre-ops"],
+    "status": "BLOCKED"
+  },
+  "invictus": {
+    "name": "Invictus",
+    "role": "security, hardening, permissions, and threat controls",
+    "actions": ["status", "health", "logs", "system-health", "security-audit", "audit-verify", "release-current"],
+    "service_targets": ["api", "proxy"],
+    "capabilities": ["security-audit", "permission-review", "exposure-review"],
+    "model_policy": "local-first; no security control changes through model routing",
+    "tools": ["cadre-ops", "read-only-host-security-tools"],
+    "status": "AVAILABLE"
+  },
+  "porter": {
+    "name": "Porter",
+    "role": "maintenance, backups, cleanup, and lifecycle operations",
+    "actions": ["status", "health", "logs", "backup", "backup-status", "backup-verify", "restore-test", "system-health", "release-current"],
+    "service_targets": ["api", "proxy", "db"],
+    "capabilities": ["backup", "restore-test", "storage-health", "maintenance-status"],
+    "model_policy": "local-first; no deletion of canonical data",
+    "tools": ["cadre-ops"],
+    "status": "AVAILABLE"
+  },
+  "griot": {
+    "name": "Griot",
+    "role": "audit, provenance, change records, and validation evidence",
+    "actions": ["status", "health", "backup-status", "release-current", "release-history", "system-health", "audit-verify"],
+    "service_targets": [],
+    "capabilities": ["audit-read", "release-provenance", "validation-evidence"],
+    "model_policy": "local-first; read and report authority",
+    "tools": ["cadre-ops-read"],
+    "status": "AVAILABLE"
+  },
+  "sentinel": {
+    "name": "Sentinel",
+    "role": "uptime, health, resource, and failure detection",
+    "actions": ["status", "health", "system-health", "release-current"],
+    "service_targets": [],
+    "capabilities": ["health-probe", "resource-monitoring", "failure-detection"],
+    "model_policy": "deterministic checks first",
+    "tools": ["cadre-ops-read", "systemd-timer"],
+    "status": "AVAILABLE"
+  }
+}

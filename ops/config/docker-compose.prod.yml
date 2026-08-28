@@ -1,0 +1,109 @@
+name: lanseir-cadre
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cadre
+      POSTGRES_USER: cadre
+      POSTGRES_PASSWORD: ${CADRE_DB_PASSWORD:?CADRE_DB_PASSWORD is required}
+    volumes:
+      - cadre_postgres:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cadre -d cadre"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+
+  api:
+    build:
+      context: ${CADRE_RELEASE_PATH:?CADRE_RELEASE_PATH is required}
+      dockerfile: Dockerfile.ops
+    restart: unless-stopped
+    environment:
+      CADRE_ENV: production
+      CADRE_APP_NAME: LANSEIR / CADRE Core
+      CADRE_DATABASE_URL: ${CADRE_DATABASE_URL:?CADRE_DATABASE_URL is required}
+      CADRE_OPERATIONS_STATE_PATH: /run/lanseir/state/mission-control.json
+      CADRE_RELEASE_ID: ${CADRE_RELEASE_ID:?CADRE_RELEASE_ID is required}
+      CADRE_API_TOKENS_JSON: ${CADRE_API_TOKENS_JSON:?CADRE_API_TOKENS_JSON is required}
+      CADRE_MAX_REQUEST_BODY_BYTES: 1048576
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - /opt/lanseir/cadre/state:/run/lanseir/state:ro
+    networks:
+      - application
+      - data
+      - internal
+      - operations
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      CADRE_PUBLIC_HOST: ${CADRE_PUBLIC_HOST:?CADRE_PUBLIC_HOST is required}
+      CADRE_ACME_EMAIL: ${CADRE_ACME_EMAIL:?CADRE_ACME_EMAIL is required}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - /etc/lanseir/operations/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - public
+      - application
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+
+volumes:
+  cadre_postgres:
+  caddy_data:
+  caddy_config:
+
+networks:
+  public:
+  application:
+    internal: true
+  internal:
+    internal: true
+  operations:
+    internal: true
+  data:
+    internal: true

@@ -1,0 +1,22 @@
+{
+  "audit_max_bytes": 67108864,
+  "backup_max_local_sets": 14,
+  "backup_min_free_bytes": 5368709120,
+  "backup_min_free_percent": 15,
+  "backup_min_interval_seconds": 21600,
+  "backup_max_database_dump_bytes": 10737418240,
+  "default_action_min_interval_seconds": 1,
+  "action_min_interval_seconds": {
+    "backup": 0,
+    "deploy": 5,
+    "rollback": 5,
+    "restart": 2,
+    "restore-test": 60,
+    "security-audit": 60,
+    "audit-verify": 10
+  },
+  "release_max_archive_bytes": 268435456,
+  "release_max_expanded_bytes": 536870912,
+  "release_max_members": 10000,
+  "release_max_file_bytes": 67108864
+}

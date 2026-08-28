@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from sqlalchemy.orm import Session
 from app.api.routes import router
 from app.core.config import get_settings
+from app.core.middleware import RequestBodyLimitMiddleware
 from app.db.base import Base
 from app.db.session import engine
 from app.services.seed import seed_doctrine
@@ -21,10 +22,11 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.1.0",
-    description="CADRE Milestone 1 — Sovereign Core Foundation",
+    version="0.2.0",
+    description="CADRE Milestone 1 — Sovereign Core with governed operations",
     lifespan=lifespan,
 )
+app.add_middleware(RequestBodyLimitMiddleware, max_bytes=settings.max_request_body_bytes)
 app.include_router(router, prefix=settings.api_prefix)
 
 
