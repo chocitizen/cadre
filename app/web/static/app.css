@@ -47,6 +47,7 @@ p { margin: 0; }
 .stack-lg { display: grid; gap: var(--space-5); }
 .cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .split { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
+.split > * { min-width: 0; }
 
 .boot-shell { min-height: 100vh; display: grid; place-content: center; gap: var(--space-4); padding: 2rem; text-align: center; }
 .loading-line { width: min(20rem, 70vw); height: 1px; overflow: hidden; background: var(--line); }
@@ -61,22 +62,23 @@ p { margin: 0; }
 .hero-copy p { max-width: 54ch; color: var(--muted); font-size: clamp(1rem, 1.7vw, 1.25rem); }
 .auth-panel { background: rgba(23, 23, 19, .92); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: clamp(1.5rem, 4vw, 2.5rem); }
 .tab-list { display: grid; grid-template-columns: 1fr 1fr; padding: .25rem; margin-bottom: var(--space-4); background: var(--ink); border-radius: var(--radius-sm); }
-.tab { border: 0; border-radius: .32rem; background: transparent; color: var(--muted); padding: .7rem; cursor: pointer; }
+.tab { min-height: 2.75rem; border: 0; border-radius: .32rem; background: transparent; color: var(--muted); padding: .7rem; cursor: pointer; }
 .tab[aria-selected="true"] { background: var(--panel-2); color: var(--ivory); }
 
 label { display: grid; gap: .45rem; color: var(--muted); font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 input, textarea, select { width: 100%; border: 1px solid rgba(241, 237, 226, .16); border-radius: var(--radius-sm); background: #0d0d0b; color: var(--ivory); padding: .8rem .9rem; }
 textarea { min-height: 8rem; resize: vertical; line-height: 1.6; }
-input::placeholder, textarea::placeholder { color: #777264; }
+input::placeholder, textarea::placeholder { color: #999281; }
 input:focus, textarea:focus, select:focus { border-color: var(--brass); outline: 1px solid var(--brass); }
-.button { min-height: 2.7rem; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border: 1px solid var(--brass); border-radius: var(--radius-sm); padding: .65rem 1rem; background: var(--brass); color: #12110e; font-weight: 750; cursor: pointer; text-decoration: none; }
+.button { min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border: 1px solid var(--brass); border-radius: var(--radius-sm); padding: .65rem 1rem; background: var(--brass); color: #12110e; font-weight: 750; cursor: pointer; text-decoration: none; }
 .button:hover { background: var(--brass-soft); }
 .button.secondary { background: transparent; color: var(--ivory); border-color: var(--line); }
 .button.secondary:hover { border-color: var(--brass); color: var(--brass-soft); }
 .button.danger { background: transparent; color: var(--danger); border-color: rgba(216, 134, 125, .5); }
 .button:disabled { opacity: .45; cursor: not-allowed; }
-.link-button { padding: 0; border: 0; background: none; color: var(--brass-soft); cursor: pointer; text-decoration: underline; }
+.link-button { min-height: 2.75rem; display: inline-flex; align-items: center; padding: 0; border: 0; background: none; color: var(--brass-soft); cursor: pointer; text-decoration: underline; }
 .field-error, .error-banner { color: #f3b0a8; }
+.field-error, .error-banner, .success-banner, .message, .muted, .small { overflow-wrap: anywhere; }
 .error-banner { padding: .8rem 1rem; border: 1px solid rgba(216, 134, 125, .4); border-radius: var(--radius-sm); background: rgba(216, 134, 125, .08); }
 .success-banner { color: #b8e2c5; padding: .8rem 1rem; border: 1px solid rgba(141, 187, 156, .4); border-radius: var(--radius-sm); background: rgba(141, 187, 156, .08); }
 
@@ -89,7 +91,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--brass); outline:
 .sidebar-foot { margin-top: auto; padding: 1rem .75rem 0; border-top: 1px solid var(--line); }
 .app-main { min-width: 0; }
 .topbar { min-height: 4.5rem; display: flex; justify-content: flex-end; align-items: center; gap: 1rem; padding: .8rem clamp(1rem, 4vw, 3.5rem); border-bottom: 1px solid var(--line); }
-.avatar { width: 2.3rem; height: 2.3rem; display: grid; place-content: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--brass-soft); font-family: var(--serif); cursor: pointer; }
+.avatar { width: 2.75rem; height: 2.75rem; display: grid; place-content: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--brass-soft); font-family: var(--serif); cursor: pointer; }
 .page { max-width: 88rem; margin: auto; padding: clamp(2rem, 5vw, 4.5rem) clamp(1rem, 4vw, 3.5rem) 7rem; }
 .page-head { display: grid; gap: .8rem; margin-bottom: var(--space-5); }
 .page-head p { max-width: 60ch; color: var(--muted); }
@@ -136,7 +138,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--brass); outline:
   .hero { grid-template-columns: 1fr; }
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .mobile-nav { position: fixed; z-index: 50; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(6, 1fr); background: rgba(13, 13, 12, .96); border-top: 1px solid var(--line); backdrop-filter: blur(14px); }
+  .mobile-nav { position: fixed; z-index: 50; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding-bottom: env(safe-area-inset-bottom); background: rgba(13, 13, 12, .96); border-top: 1px solid var(--line); backdrop-filter: blur(14px); }
   .mobile-nav button { min-height: 4rem; border: 0; background: transparent; color: var(--muted); font-size: .68rem; }
   .mobile-nav button.active { color: var(--brass-soft); }
   .span-8, .span-7, .span-6, .span-5, .span-4, .span-3 { grid-column: span 12; }
@@ -149,6 +151,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--brass); outline:
   .hero { padding-top: 3rem; align-content: start; }
   .topbar { justify-content: space-between; }
   .page { padding-top: 2rem; }
+  .split { flex-wrap: wrap; }
   .card { border-radius: .65rem; }
   .button { width: 100%; }
   .cluster .button { flex: 1 1 auto; }

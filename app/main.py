@@ -77,6 +77,11 @@ def root() -> FileResponse:
     return product_shell()
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> FileResponse:
+    return FileResponse(web_root / "static" / "favicon.svg", media_type="image/svg+xml")
+
+
 @app.get("/healthz", include_in_schema=False)
 def healthz() -> dict:
     return {"status": "ok", "system": "LANSEIR", "release": settings.release_id}
