@@ -136,7 +136,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--brass); outline:
   .hero { grid-template-columns: 1fr; }
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .mobile-nav { position: fixed; z-index: 50; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(5, 1fr); background: rgba(13, 13, 12, .96); border-top: 1px solid var(--line); backdrop-filter: blur(14px); }
+  .mobile-nav { position: fixed; z-index: 50; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(6, 1fr); background: rgba(13, 13, 12, .96); border-top: 1px solid var(--line); backdrop-filter: blur(14px); }
   .mobile-nav button { min-height: 4rem; border: 0; background: transparent; color: var(--muted); font-size: .68rem; }
   .mobile-nav button.active { color: var(--brass-soft); }
   .span-8, .span-7, .span-6, .span-5, .span-4, .span-3 { grid-column: span 12; }

@@ -1,9 +1,11 @@
 from functools import lru_cache
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    env: str = "development"
+    env: Literal["development", "test", "production"] = "development"
     app_name: str = "LANSEIR"
     database_url: str = "sqlite:///./cadre.db"
     api_prefix: str = "/api/v1"
@@ -11,8 +13,12 @@ class Settings(BaseSettings):
     release_id: str = "development"
     api_tokens_json: str = "{}"
     max_request_body_bytes: int = 1_048_576
+    public_url: str = "http://127.0.0.1:8000"
     session_days: int = 30
     admin_emails: str = ""
+    mail_webhook_url: str = ""
+    mail_webhook_token: str = ""
+    support_email: str = "support@lanseir.com"
     ai_provider: str = "local"
     ai_model: str = "lanseir-reflection-v1"
     ai_base_url: str = "https://api.openai.com/v1"
@@ -20,6 +26,7 @@ class Settings(BaseSettings):
     ai_daily_message_limit: int = 40
     auth_rate_limit_per_minute: int = 20
     request_timeout_seconds: int = 30
+    expose_development_tokens: bool = False
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),

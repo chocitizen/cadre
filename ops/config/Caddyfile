@@ -20,25 +20,24 @@
     -Server
   }
 
-  @health {
-    path /healthz
-    method GET HEAD
+  @internal {
+    path /api/v1/health /api/v1/operations/* /api/v1/doctrine* /api/v1/projects* /api/v1/command-briefs* /api/v1/mission-control* /api/v1/identity/* /api/v1/content-sources* /api/v1/admin/* /docs* /redoc* /openapi.json
   }
-  handle @health {
-    reverse_proxy api:8000 {
-      transport http {
-        dial_timeout 3s
-        response_header_timeout 5s
-      }
-    }
-  }
+  respond @internal 404
 
-  handle {
+  @public {
+    path / /app /privacy /terms /support /static/* /healthz /api/v1/auth/* /api/v1/me* /api/v1/library /api/v1/books/* /api/v1/bookmarks* /api/v1/notes* /api/v1/captains-log* /api/v1/voyages* /api/v1/ai/* /api/v1/support
+  }
+  handle @public {
     reverse_proxy api:8000 {
       transport http {
         dial_timeout 5s
         response_header_timeout 35s
       }
     }
+  }
+
+  handle {
+    respond 404
   }
 }

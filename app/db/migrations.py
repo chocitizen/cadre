@@ -8,14 +8,15 @@ from app.models.entities import SchemaMigration
 MIGRATIONS = (
     "20260826_01_fastapi_m1",
     "20260828_01_lanseir_product_spine",
+    "20260828_02_mission_execution_and_provenance",
 )
 
 
 def run_migrations(engine) -> list[str]:
-    """Apply additive, idempotent schema migrations and record their versions.
+    """Apply additive, idempotent schema creation and record its version.
 
-    M2 adds tables and indexes only; it does not rewrite or delete M1 data.
-    Future destructive or column-altering changes require explicit migration SQL.
+    The current release adds only tables and indexes. Future destructive or
+    column-altering work requires an explicit migration and rollback plan.
     """
     Base.metadata.create_all(bind=engine)
     applied: list[str] = []

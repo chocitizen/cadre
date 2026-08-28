@@ -193,7 +193,7 @@ function navigate(route) {
 }
 
 function navigation(mobile = false) {
-  const items = mobile ? navItems.slice(0, 5) : navItems;
+  const items = navItems;
   return node("nav", { class: mobile ? "mobile-nav" : "nav-list", "aria-label": mobile ? "Mobile navigation" : "Primary navigation" }, items.map(([route, label]) => node("button", { class: `${mobile ? "" : "nav-link"} ${state.route === route ? "active" : ""}`.trim(), type: "button", onClick: () => navigate(route) }, label)));
 }
 
@@ -245,7 +245,7 @@ async function renderLibrary() {
   const books = await api("/library"); const main = contentRoot();
   main.replaceChildren(pageHead("LIBRARY", "Works worth returning to.", "Your reading position, notes, and bookmarks remain attached to your account."));
   if (!books.length) return main.append(node("div", { class: "empty" }, "No titles are currently available."));
-  const cards = books.map((book) => node(
+  main.append(node("div", { class: "grid" }, books.map((book) => node(
     "article",
     { class: "card span-6" },
     node("p", { class: "eyebrow" }, book.publisher),
@@ -259,8 +259,7 @@ async function renderLibrary() {
       node("span", { class: "status" }, book.state === "available" ? (book.entitlement ? "In your library" : "Access required") : "Awaiting authorized source"),
       button("Open", () => renderBook(book.slug), "secondary")
     )
-  ));
-  main.append(node("div", { class: "grid" }, cards));
+  ))));
 }
 
 async function renderBook(slug) {
@@ -355,13 +354,39 @@ async function renderSettings() {
   const password = node("form", { class: "card stack" }, node("h2", {}, "Password"), field("Current password", "current_password", "password"), field("New password", "new_password", "password", { minlength: 12 }), node("div", { class: "form-status" }), node("button", { class: "button", type: "submit" }, "Change password"));
   password.addEventListener("submit", async (event) => { event.preventDefault(); try { await api("/me/password", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(password))) }); password.reset(); showToast("Password changed."); } catch (error) { password.querySelector(".form-status").replaceChildren(errorBox(error)); } });
   const control = node("section", { class: "card stack" }, node("h2", {}, "Data control"), node("p", { class: "muted" }, "Export a portable JSON record of your account and private product state."), button("Export my data", async () => { const data = await api("/me/export"); const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const link = node("a", { href: URL.createObjectURL(blob), download: `lanseir-export-${new Date().toISOString().slice(0, 10)}.json` }); document.body.append(link); link.click(); link.remove(); }, "secondary"), node("a", { href: "/privacy" }, "Read privacy boundaries"));
+  const deletion = node("form", { class: "card stack" }, node("p", { class: "eyebrow" }, "IRREVERSIBLE"), node("h2", {}, "Delete account"), node("p", { class: "muted" }, "Confirm the signed-in email and password. Active account data will be deleted; protected operational backups follow their governed retention policy."), field("Email", "email", "email", { value: state.user.email }), field("Password", "password", "password"), node("div", { class: "form-status" }), node("button", { class: "button secondary", type: "submit" }, "Delete my account"));
+  deletion.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const status = deletion.querySelector(".form-status");
+    try {
+      await api("/me", { method: "DELETE", body: JSON.stringify(Object.fromEntries(new FormData(deletion))) });
+      state.user = null; state.csrf = null; history.replaceState(null, "", "/"); renderLanding();
+    } catch (error) { status.replaceChildren(errorBox(error)); }
+  });
   const operational = state.user.role === "admin" ? node("section", { class: "card stack" }, node("p", { class: "eyebrow" }, "ADMIN"), node("h2", {}, "Mission Control"), node("p", { class: "muted" }, "Inspect actual system state, specialist definitions, runs, and failures."), button("Open Mission Control", () => navigate("mission"), "secondary")) : null;
-  main.replaceChildren(pageHead("SETTINGS", "Your account, under your control.", state.user.email), node("div", { class: "grid" }, node("div", { class: "span-6 stack" }, profile, control), node("div", { class: "span-6 stack" }, password, operational || node("section", { class: "card" }, node("p", { class: "eyebrow" }, "SUPPORT"), node("h3", {}, "Need a hand?"), node("a", { href: "/support" }, "Open Support")))));
+  main.replaceChildren(pageHead("SETTINGS", "Your account, under your control.", state.user.email), node("div", { class: "grid" }, node("div", { class: "span-6 stack" }, profile, control), node("div", { class: "span-6 stack" }, password, operational || node("section", { class: "card" }, node("p", { class: "eyebrow" }, "SUPPORT"), node("h3", {}, "Need a hand?"), node("a", { href: "/support" }, "Open Support")), deletion)));
 }
 
 async function renderMission() {
   const data = await api("/admin/mission-control"); const main = contentRoot();
-  main.replaceChildren(pageHead("CADRE / MISSION CONTROL", "System truth, not theater.", `${data.environment} · release ${data.release}`), node("div", { class: "grid" }, Object.entries(data.counts).map(([key, value]) => node("section", { class: "card span-3" }, node("p", { class: "eyebrow" }, key.replaceAll("_", " ")), node("p", { class: "stat" }, value)))), node("section", { class: "card mt-3" }, node("div", { class: "split" }, node("div", {}, node("p", { class: "eyebrow" }, "ROUTING POLICY"), node("h2", {}, `${data.ai_policy.provider} / ${data.ai_policy.model}`)), node("span", { class: "status good" }, `${data.ai_policy.daily_message_limit} messages/day`))), node("div", { class: "grid mt-3" }, data.specialists.map((item) => node("section", { class: "card span-4" }, node("p", { class: "eyebrow" }, item.key), node("h3", {}, item.name), node("p", { class: "muted" }, item.responsibility), node("p", { class: "small" }, `Routes: ${item.routing_criteria.join(", ")}`)))), node("section", { class: "card mt-3" }, node("h2", {}, "Recent runs"), data.recent_runs.length ? node("div", { class: "list" }, data.recent_runs.map((run) => node("div", { class: "list-item" }, node("div", { class: "split" }, node("strong", {}, `${run.specialist} · ${run.task_kind}`), node("span", { class: `status ${run.status === "completed" ? "good" : ""}` }, run.status)), node("span", { class: "small muted" }, `${run.provider || "unassigned"} / ${run.model || "unassigned"} · ${run.latency_ms || 0}ms`)))) : node("div", { class: "empty" }, "No execution runs have been recorded.")));
+  const missionRows = data.missions.length ? node("div", { class: "list" }, data.missions.map((mission) => {
+    const fix = mission.fix_available ? button("FIX", async () => {
+      await api(`/admin/missions/${mission.id}/fix`, { method: "POST" });
+      showToast("Recovery mission dispatched to Al.");
+      await renderMission();
+    }, "secondary") : null;
+    return node("div", { class: "list-item" }, node("div", { class: "split" }, node("strong", {}, mission.title), node("span", { class: `status ${mission.status === "verified" ? "good" : ""}` }, mission.status)), node("p", { class: "small muted" }, `${mission.specialist} · ${mission.failure_class || "no failure"}`), mission.root_cause ? node("p", {}, mission.root_cause) : null, fix);
+  })) : node("div", { class: "empty" }, "No approved missions are queued.");
+  const evidenceRows = data.evidence.length ? node("div", { class: "list" }, data.evidence.map((item) => node("div", { class: "list-item" }, node("div", { class: "split" }, node("strong", {}, item.kind.replaceAll("_", " ")), node("span", { class: `status ${item.passed ? "good" : ""}` }, item.passed ? "verified evidence" : "failure evidence")), node("p", {}, item.summary), item.locator ? node("p", { class: "small muted" }, item.locator) : null))) : node("div", { class: "empty" }, "No material evidence has been recorded.");
+  main.replaceChildren(
+    pageHead("CADRE / MISSION CONTROL", "System truth, not theater.", `${data.environment} · release ${data.release}`),
+    node("div", { class: "grid" }, Object.entries(data.counts).map(([key, value]) => node("section", { class: "card span-3" }, node("p", { class: "eyebrow" }, key.replaceAll("_", " ")), node("p", { class: "stat" }, value)))),
+    node("section", { class: "card mt-3" }, node("h2", {}, "Approved mission execution"), missionRows),
+    node("section", { class: "card mt-3" }, node("h2", {}, "Evidence ledger"), evidenceRows),
+    node("section", { class: "card mt-3" }, node("div", { class: "split" }, node("div", {}, node("p", { class: "eyebrow" }, "ROUTING POLICY"), node("h2", {}, `${data.ai_policy.provider} / ${data.ai_policy.model}`)), node("span", { class: "status good" }, `${data.ai_policy.daily_message_limit} messages/day`))),
+    node("div", { class: "grid mt-3" }, data.specialists.map((item) => node("section", { class: "card span-4" }, node("p", { class: "eyebrow" }, item.key), node("h3", {}, item.name), node("p", { class: "muted" }, item.responsibility), node("p", { class: "small" }, `Routes: ${item.routing_criteria.join(", ")}`)))),
+    node("section", { class: "card mt-3" }, node("h2", {}, "Recent runs"), data.recent_runs.length ? node("div", { class: "list" }, data.recent_runs.map((run) => node("div", { class: "list-item" }, node("div", { class: "split" }, node("strong", {}, `${run.specialist} · ${run.task_kind}`), node("span", { class: `status ${run.status === "completed" ? "good" : ""}` }, run.status)), node("span", { class: "small muted" }, `${run.provider || "unassigned"} / ${run.model || "unassigned"} · ${run.latency_ms || 0}ms`)))) : node("div", { class: "empty" }, "No execution runs have been recorded."))
+  );
 }
 
 function renderNotFound() {

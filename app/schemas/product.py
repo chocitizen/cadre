@@ -117,6 +117,7 @@ class AdminContentState(BaseModel):
 
 
 class AdminChapterCreate(BaseModel):
+    source_id: str = Field(max_length=36)
     title: str = Field(min_length=1, max_length=240)
     position: int = Field(ge=1, le=10_000)
     body: str = Field(min_length=1, max_length=500_000)

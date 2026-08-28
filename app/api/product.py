@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -17,12 +19,17 @@ from app.models.entities import (
     AuditEvent,
     Book,
     Bookmark,
+    CanonicalContentSource,
     Chapter,
+    ChapterProvenance,
     ContentState,
+    ContentSourceStatus,
     Conversation,
     Entitlement,
     IdentityToken,
     JournalEntry,
+    Mission,
+    MissionStatus,
     Note,
     ReadingProgress,
     RunStatus,
@@ -70,6 +77,7 @@ from app.services.identity import (
     validate_new_password,
     verify_password,
 )
+from app.services.mission_control import fix_mission, mission_snapshot
 
 
 router = APIRouter()
@@ -108,12 +116,16 @@ def _issue_identity_token(db: Session, user: User, purpose: str, lifetime_minute
             expires_at=utcnow() + timedelta(minutes=lifetime_minutes),
         )
     )
-    db.commit()
+    db.flush()
     return raw
 
 
 def _development_token(raw: str) -> dict:
-    return {"development_token": raw} if settings.env != "production" else {}
+    return (
+        {"development_token": raw}
+        if settings.env == "development" and settings.expose_development_tokens
+        else {}
+    )
 
 
 @router.post("/auth/signup", status_code=status.HTTP_201_CREATED)
@@ -122,15 +134,14 @@ def signup(payload: SignUp, request: Request, response: Response, db: Session = 
     email = normalize_email(payload.email)
     if db.scalar(select(User).where(User.email == email)) is not None:
         raise HTTPException(status_code=409, detail="An account already exists for this email")
-    admins = {value.strip().casefold() for value in settings.admin_emails.split(",") if value.strip()}
     user = User(
         email=email,
         password_hash=hash_password(payload.password),
         display_name=payload.display_name.strip(),
-        role="admin" if email in admins else "member",
+        role="member",
     )
     db.add(user)
-    db.commit()
+    db.flush()
     db.refresh(user)
     verification = _issue_identity_token(db, user, "verify_email", 24 * 60)
     csrf = issue_session(db, response, user)
@@ -158,8 +169,8 @@ def session(request: Request, db: Session = Depends(get_db)) -> dict:
 
 @router.post("/auth/signout", status_code=status.HTTP_204_NO_CONTENT)
 def signout(request: Request, response: Response, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> Response:
-    audit(db, request, "session.revoked", user.id)
     clear_session(db, request, response)
+    audit(db, request, "session.revoked", user.id)
     response.status_code = 204
     return response
 
@@ -174,7 +185,6 @@ def verify_email(payload: TokenRequest, request: Request, db: Session = Depends(
         raise HTTPException(status_code=400, detail="Verification link is invalid or expired")
     record.used_at = utcnow()
     user.email_verified_at = utcnow()
-    db.commit()
     audit(db, request, "account.email_verified", user.id)
     return {"verified": True}
 
@@ -185,6 +195,7 @@ def forgot_password(payload: EmailRequest, db: Session = Depends(get_db)) -> dic
     result = {"accepted": True, "delivery": "pending"}
     if user is not None and user.is_active:
         raw = _issue_identity_token(db, user, "password_reset", 30)
+        db.commit()
         result.update(_development_token(raw))
     return result
 
@@ -199,9 +210,12 @@ def reset_password(payload: PasswordReset, request: Request, db: Session = Depen
     if user is None:
         raise HTTPException(status_code=400, detail="Reset link is invalid or expired")
     user.password_hash = hash_password(payload.new_password)
-    record.used_at = utcnow()
+    db.execute(
+        update(IdentityToken)
+        .where(IdentityToken.user_id == user.id, IdentityToken.purpose == "password_reset", IdentityToken.used_at.is_(None))
+        .values(used_at=utcnow())
+    )
     db.execute(delete(UserSession).where(UserSession.user_id == user.id))
-    db.commit()
     audit(db, request, "account.password_reset", user.id)
     return {"reset": True}
 
@@ -218,9 +232,8 @@ def me(user: User = Depends(require_user)) -> dict:
 @router.patch("/me")
 def update_profile(payload: ProfileUpdate, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> dict:
     user.display_name = payload.display_name.strip()
-    db.commit()
-    db.refresh(user)
     audit(db, request, "account.profile_updated", user.id)
+    db.refresh(user)
     return _public_user(user)
 
 
@@ -230,13 +243,18 @@ def change_password(payload: PasswordChange, request: Request, user: User = Depe
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     validate_new_password(payload.new_password)
     user.password_hash = hash_password(payload.new_password)
-    db.commit()
+    db.execute(
+        update(IdentityToken)
+        .where(IdentityToken.user_id == user.id, IdentityToken.purpose == "password_reset", IdentityToken.used_at.is_(None))
+        .values(used_at=utcnow())
+    )
     audit(db, request, "account.password_changed", user.id)
     return {"changed": True}
 
 
 @router.get("/me/export")
 def export_account(user: User = Depends(require_user), db: Session = Depends(get_db)) -> dict:
+    conversation_ids = list(db.scalars(select(Conversation.id).where(Conversation.user_id == user.id)).all())
     return {
         "exported_at": utcnow().isoformat(),
         "account": _public_user(user),
@@ -245,7 +263,11 @@ def export_account(user: User = Depends(require_user), db: Session = Depends(get
         "notes": [_note(item) for item in db.scalars(select(Note).where(Note.user_id == user.id)).all()],
         "captains_log": [_journal(item) for item in db.scalars(select(JournalEntry).where(JournalEntry.user_id == user.id)).all()],
         "voyage_reflections": [{"id": item.id, "lesson_id": item.lesson_id, "body": item.body, "updated_at": item.updated_at} for item in db.scalars(select(VoyageReflection).where(VoyageReflection.user_id == user.id)).all()],
+        "voyage_enrollments": [{"id": item.id, "voyage_id": item.voyage_id, "status": item.status, "current_lesson_id": item.current_lesson_id, "completed_lesson_ids": item.completed_lesson_ids, "started_at": item.started_at, "completed_at": item.completed_at, "updated_at": item.updated_at} for item in db.scalars(select(VoyageEnrollment).where(VoyageEnrollment.user_id == user.id)).all()],
+        "entitlements": [{"id": item.id, "book_id": item.book_id, "state": item.state, "source": item.source, "expires_at": item.expires_at, "created_at": item.created_at} for item in db.scalars(select(Entitlement).where(Entitlement.user_id == user.id)).all()],
         "conversations": [_conversation(item) for item in db.scalars(select(Conversation).where(Conversation.user_id == user.id)).all()],
+        "ai_messages": [{"id": item.id, "conversation_id": item.conversation_id, "role": item.role, "content": item.content, "provider": item.provider, "model": item.model, "created_at": item.created_at} for item in db.scalars(select(AIMessage).where(AIMessage.conversation_id.in_(conversation_ids))).all()] if conversation_ids else [],
+        "support_requests": [{"id": item.id, "email": item.email, "subject": item.subject, "body": item.body, "status": item.status, "created_at": item.created_at} for item in db.scalars(select(SupportRequest).where(SupportRequest.user_id == user.id)).all()],
     }
 
 
@@ -253,9 +275,9 @@ def export_account(user: User = Depends(require_user), db: Session = Depends(get
 def delete_account(payload: SignIn, request: Request, response: Response, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> Response:
     if normalize_email(payload.email) != user.email or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Account confirmation is incorrect")
-    audit(db, request, "account.deletion_requested", user.id)
+    user_id = user.id
     db.delete(user)
-    db.commit()
+    audit(db, request, "account.deleted", None, "user", user_id)
     response.delete_cookie("lanseir_session", path="/")
     response.delete_cookie("lanseir_csrf", path="/")
     response.status_code = 204
@@ -284,6 +306,15 @@ def _book(db: Session, item: Book, user: User) -> dict:
         "entitlement": entitlement.state if entitlement else None,
         "progress": _progress(progress),
     }
+
+
+def _validate_book_context(db: Session, user: User, book_id: str, chapter_id: str | None) -> None:
+    if db.get(Book, book_id) is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    if user.role != "admin" and _active_entitlement(db, user.id, book_id) is None:
+        raise HTTPException(status_code=403, detail="Active book entitlement required")
+    if chapter_id and db.scalar(select(Chapter).where(Chapter.id == chapter_id, Chapter.book_id == book_id)) is None:
+        raise HTTPException(status_code=422, detail="Chapter does not belong to this book")
 
 
 @router.get("/library")
@@ -321,12 +352,11 @@ def save_progress(book_id: str, payload: ProgressUpdate, request: Request, user:
         db.add(item)
     for key, value in payload.model_dump().items():
         setattr(item, key, value)
-    db.commit()
-    db.refresh(item)
     audit(db, request, "reading.progress_saved", user.id, "book", book_id, {"percent": payload.percent})
-    saved = _progress(item)
-    assert saved is not None
-    return saved
+    db.refresh(item)
+    progress = _progress(item)
+    assert progress is not None
+    return progress
 
 
 def _bookmark(item: Bookmark) -> dict:
@@ -340,13 +370,12 @@ def list_bookmarks(user: User = Depends(require_user), db: Session = Depends(get
 
 @router.post("/bookmarks", status_code=201)
 def create_bookmark(payload: BookmarkCreate, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> dict:
-    if user.role != "admin" and _active_entitlement(db, user.id, payload.book_id) is None:
-        raise HTTPException(status_code=403, detail="Active book entitlement required")
+    _validate_book_context(db, user, payload.book_id, payload.chapter_id)
     item = Bookmark(user_id=user.id, **payload.model_dump())
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    db.flush()
     audit(db, request, "bookmark.created", user.id, "bookmark", item.id)
+    db.refresh(item)
     return _bookmark(item)
 
 
@@ -354,7 +383,6 @@ def create_bookmark(payload: BookmarkCreate, request: Request, user: User = Depe
 def delete_bookmark(item_id: str, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> Response:
     item = _owned(db, Bookmark, item_id, user.id)
     db.delete(item)
-    db.commit()
     audit(db, request, "bookmark.deleted", user.id, "bookmark", item_id)
     return Response(status_code=204)
 
@@ -370,24 +398,23 @@ def list_notes(user: User = Depends(require_user), db: Session = Depends(get_db)
 
 @router.post("/notes", status_code=201)
 def create_note(payload: NoteCreate, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> dict:
-    if user.role != "admin" and _active_entitlement(db, user.id, payload.book_id) is None:
-        raise HTTPException(status_code=403, detail="Active book entitlement required")
+    _validate_book_context(db, user, payload.book_id, payload.chapter_id)
     item = Note(user_id=user.id, **payload.model_dump())
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    db.flush()
     audit(db, request, "note.created", user.id, "note", item.id)
+    db.refresh(item)
     return _note(item)
 
 
 @router.put("/notes/{item_id}")
 def update_note(item_id: str, payload: NoteCreate, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> dict:
     item = _owned(db, Note, item_id, user.id)
+    _validate_book_context(db, user, payload.book_id, payload.chapter_id)
     for key, value in payload.model_dump().items():
         setattr(item, key, value)
-    db.commit()
-    db.refresh(item)
     audit(db, request, "note.updated", user.id, "note", item.id)
+    db.refresh(item)
     return _note(item)
 
 
@@ -395,7 +422,6 @@ def update_note(item_id: str, payload: NoteCreate, request: Request, user: User 
 def delete_note(item_id: str, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> Response:
     item = _owned(db, Note, item_id, user.id)
     db.delete(item)
-    db.commit()
     audit(db, request, "note.deleted", user.id, "note", item_id)
     return Response(status_code=204)
 
@@ -417,9 +443,9 @@ def list_journal(query: str = Query(default="", max_length=200), user: User = De
 def create_journal(payload: JournalCreate, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> dict:
     item = JournalEntry(user_id=user.id, **payload.model_dump())
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    db.flush()
     audit(db, request, "journal.created", user.id, "journal", item.id)
+    db.refresh(item)
     return _journal(item)
 
 
@@ -428,9 +454,8 @@ def update_journal(item_id: str, payload: JournalUpdate, request: Request, user:
     item = _owned(db, JournalEntry, item_id, user.id)
     for key, value in payload.model_dump().items():
         setattr(item, key, value)
-    db.commit()
-    db.refresh(item)
     audit(db, request, "journal.updated", user.id, "journal", item.id)
+    db.refresh(item)
     return _journal(item)
 
 
@@ -438,7 +463,6 @@ def update_journal(item_id: str, payload: JournalUpdate, request: Request, user:
 def delete_journal(item_id: str, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> Response:
     item = _owned(db, JournalEntry, item_id, user.id)
     db.delete(item)
-    db.commit()
     audit(db, request, "journal.deleted", user.id, "journal", item_id)
     return Response(status_code=204)
 
@@ -475,16 +499,16 @@ def enroll(voyage_id: str, request: Request, user: User = Depends(require_user_w
         first_lesson = db.scalar(select(VoyageLesson).where(VoyageLesson.voyage_id == voyage_id).order_by(VoyageLesson.position))
         item = VoyageEnrollment(user_id=user.id, voyage_id=voyage_id, current_lesson_id=first_lesson.id if first_lesson else None)
         db.add(item)
-        db.commit()
         audit(db, request, "voyage.started", user.id, "voyage", voyage_id)
     return _voyage(db, voyage, user)
 
 
 @router.put("/voyages/{voyage_id}/lessons/{lesson_id}/reflection")
 def save_reflection(voyage_id: str, lesson_id: str, payload: ReflectionSave, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> dict:
+    voyage = db.get(Voyage, voyage_id)
     enrollment = db.scalar(select(VoyageEnrollment).where(VoyageEnrollment.user_id == user.id, VoyageEnrollment.voyage_id == voyage_id))
     lesson = db.scalar(select(VoyageLesson).where(VoyageLesson.id == lesson_id, VoyageLesson.voyage_id == voyage_id))
-    if enrollment is None or lesson is None:
+    if voyage is None or enrollment is None or lesson is None:
         raise HTTPException(status_code=404, detail="Active Voyage lesson not found")
     if lesson_id not in enrollment.completed_lesson_ids and enrollment.current_lesson_id != lesson_id:
         raise HTTPException(status_code=409, detail="Complete the current lesson before advancing")
@@ -503,10 +527,7 @@ def save_reflection(voyage_id: str, lesson_id: str, payload: ReflectionSave, req
             enrollment.status = "completed"
             enrollment.current_lesson_id = None
             enrollment.completed_at = utcnow()
-    db.commit()
     audit(db, request, "voyage.reflection_saved", user.id, "lesson", lesson_id, {"completed": payload.complete})
-    voyage = db.get(Voyage, voyage_id)
-    assert voyage is not None
     return _voyage(db, voyage, user)
 
 
@@ -523,9 +544,9 @@ def conversations(user: User = Depends(require_user), db: Session = Depends(get_
 def create_conversation(payload: ConversationCreate, request: Request, user: User = Depends(require_user_write), db: Session = Depends(get_db)) -> dict:
     item = Conversation(user_id=user.id, **payload.model_dump())
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    db.flush()
     audit(db, request, "ai.conversation_created", user.id, "conversation", item.id)
+    db.refresh(item)
     return _conversation(item)
 
 
@@ -570,13 +591,24 @@ async def send_message(conversation_id: str, payload: MessageCreate, request: Re
     db.commit()
     try:
         result = await route_completion(payload.content, _authorized_context(db, user, conversation))
+    except asyncio.CancelledError:
+        run.status = RunStatus.failed
+        run.error_code = "execution_cancelled"
+        run.completed_at = utcnow()
+        db.commit()
+        raise
     except ProviderError as exc:
         run.status = RunStatus.failed
         run.error_code = "provider_unavailable"
         run.completed_at = utcnow()
-        db.commit()
         audit(db, request, "ai.run_failed", user.id, "agent_run", run.id, {"error_code": run.error_code})
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        run.status = RunStatus.failed
+        run.error_code = "execution_failed"
+        run.completed_at = utcnow()
+        audit(db, request, "ai.run_failed", user.id, "agent_run", run.id, {"error_code": run.error_code})
+        raise HTTPException(status_code=500, detail="Reflection execution failed") from exc
     assistant = AIMessage(conversation_id=conversation.id, role="assistant", content=result.content, provider=result.provider, model=result.model, latency_ms=result.latency_ms, usage=result.usage)
     run.status = RunStatus.completed
     run.provider = result.provider
@@ -587,9 +619,9 @@ async def send_message(conversation_id: str, payload: MessageCreate, request: Re
     run.completed_at = utcnow()
     conversation.updated_at = utcnow()
     db.add(assistant)
-    db.commit()
-    db.refresh(assistant)
+    db.flush()
     audit(db, request, "ai.run_completed", user.id, "agent_run", run.id, {"provider": result.provider, "model": result.model})
+    db.refresh(assistant)
     return {"message": {"id": assistant.id, "role": assistant.role, "content": assistant.content, "provider": assistant.provider, "model": assistant.model, "created_at": assistant.created_at}, "run": {"id": run.id, "status": run.status.value, "provider": run.provider, "model": run.model, "latency_ms": run.latency_ms, "usage": run.usage}}
 
 
@@ -598,19 +630,21 @@ def create_support(payload: SupportCreate, request: Request, db: Session = Depen
     resolved = resolve_session(db, request)
     item = SupportRequest(user_id=resolved[1].id if resolved else None, **payload.model_dump())
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    db.flush()
     audit(db, request, "support.created", item.user_id, "support_request", item.id)
+    db.refresh(item)
     return {"id": item.id, "status": item.status, "created_at": item.created_at}
 
 
 @router.get("/admin/mission-control")
 def mission_control(_: User = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    mission_state = mission_snapshot(db)
     counts = {
         "users": db.scalar(select(func.count(User.id))) or 0,
         "open_support": db.scalar(select(func.count(SupportRequest.id)).where(SupportRequest.status == "open")) or 0,
         "active_voyages": db.scalar(select(func.count(VoyageEnrollment.id)).where(VoyageEnrollment.status == "active")) or 0,
         "failed_runs": db.scalar(select(func.count(AgentRun.id)).where(AgentRun.status == RunStatus.failed)) or 0,
+        "open_missions": len([item for item in mission_state["missions"] if item.status not in {MissionStatus.verified, MissionStatus.cancelled}]),
     }
     runs = db.scalars(select(AgentRun).order_by(AgentRun.created_at.desc()).limit(20)).all()
     specialists = db.scalars(select(Specialist).where(Specialist.is_active.is_(True)).order_by(Specialist.key)).all()
@@ -622,23 +656,74 @@ def mission_control(_: User = Depends(require_admin), db: Session = Depends(get_
         "counts": counts,
         "specialists": [{"key": item.key, "name": item.name, "responsibility": item.responsibility, "permissions": item.permissions, "routing_criteria": item.routing_criteria, "validation_requirements": item.validation_requirements} for item in specialists],
         "recent_runs": [{"id": item.id, "specialist": item.specialist_key, "task_kind": item.task_kind, "status": item.status.value, "provider": item.provider, "model": item.model, "latency_ms": item.latency_ms, "error_code": item.error_code, "created_at": item.created_at} for item in runs],
+        "missions": [
+            {
+                "id": item.id,
+                "brief_id": item.command_brief_id,
+                "title": item.title,
+                "specialist": item.specialist_key,
+                "status": item.status.value,
+                "failure_class": item.failure_class,
+                "root_cause": item.root_cause,
+                "fix_available": item.status in {
+                    MissionStatus.failed,
+                    MissionStatus.blocked,
+                    MissionStatus.stalled,
+                    MissionStatus.verification_failed,
+                },
+                "updated_at": item.updated_at,
+            }
+            for item in mission_state["missions"][:50]
+        ],
+        "evidence": [
+            {
+                "mission_id": item.mission_id,
+                "kind": item.kind,
+                "summary": item.summary,
+                "locator": item.locator,
+                "passed": item.passed,
+                "created_at": item.created_at,
+            }
+            for item in mission_state["evidence"][:50]
+        ],
     }
+
+
+@router.post("/admin/missions/{mission_id}/fix")
+def admin_fix_mission(
+    mission_id: str,
+    request: Request,
+    admin: User = Depends(require_admin_write),
+    db: Session = Depends(get_db),
+) -> dict:
+    recovery = fix_mission(db, mission_id)
+    audit(db, request, "mission.fix_invoked", admin.id, "mission", mission_id, {"recovery_id": recovery.id})
+    return {"recovery_id": recovery.id, "status": recovery.status.value}
 
 
 @router.post("/admin/books/{book_id}/chapters", status_code=201)
 def create_chapter(book_id: str, payload: AdminChapterCreate, request: Request, admin: User = Depends(require_admin_write), db: Session = Depends(get_db)) -> dict:
     if db.get(Book, book_id) is None:
         raise HTTPException(status_code=404, detail="Book not found")
-    item = Chapter(book_id=book_id, **payload.model_dump())
-    db.add(item)
+    source = db.get(CanonicalContentSource, payload.source_id)
+    if source is None or source.book_id != book_id or source.status != ContentSourceStatus.approved:
+        raise HTTPException(status_code=409, detail="Approved canonical content source required")
+    expected_hash = source.chapter_hashes.get(str(payload.position))
+    content_hash = hashlib.sha256(payload.body.encode("utf-8")).hexdigest()
+    if expected_hash is None or not secrets.compare_digest(expected_hash, content_hash):
+        raise HTTPException(status_code=409, detail="Chapter content does not match the approved canonical source")
+    values = payload.model_dump(exclude={"source_id"})
+    item = Chapter(book_id=book_id, **values)
     try:
-        db.commit()
+        db.add(item)
+        db.flush()
+        db.add(ChapterProvenance(chapter_id=item.id, source_id=source.id, content_sha256=content_hash))
+        audit(db, request, "content.chapter_created", admin.id, "chapter", item.id, {"source_id": source.id, "sha256": content_hash})
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Chapter position already exists")
     db.refresh(item)
-    audit(db, request, "content.chapter_created", admin.id, "chapter", item.id)
-    return {"id": item.id, "book_id": item.book_id, "title": item.title, "position": item.position}
+    return {"id": item.id, "book_id": item.book_id, "title": item.title, "position": item.position, "source_id": source.id, "sha256": content_hash}
 
 
 @router.put("/admin/books/{book_id}/state")
@@ -646,10 +731,17 @@ def set_book_state(book_id: str, payload: AdminContentState, request: Request, a
     book = db.get(Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
-    if payload.state == "available" and (db.scalar(select(func.count(Chapter.id)).where(Chapter.book_id == book.id)) or 0) == 0:
-        raise HTTPException(status_code=409, detail="Authorized chapter content is required before publication")
+    if payload.state == "available":
+        chapter_count = db.scalar(select(func.count(Chapter.id)).where(Chapter.book_id == book.id)) or 0
+        approved_count = db.scalar(
+            select(func.count(ChapterProvenance.id))
+            .join(Chapter, ChapterProvenance.chapter_id == Chapter.id)
+            .join(CanonicalContentSource, ChapterProvenance.source_id == CanonicalContentSource.id)
+            .where(Chapter.book_id == book.id, CanonicalContentSource.status == ContentSourceStatus.approved)
+        ) or 0
+        if chapter_count == 0 or approved_count != chapter_count:
+            raise HTTPException(status_code=409, detail="Every chapter requires approved canonical provenance before publication")
     book.state = ContentState(payload.state)
-    db.commit()
     audit(db, request, "content.state_changed", admin.id, "book", book.id, {"state": payload.state})
     return {"id": book.id, "state": book.state.value}
 
@@ -662,12 +754,12 @@ def grant_entitlement(payload: AdminEntitlement, request: Request, admin: User =
     if item is None:
         item = Entitlement(**payload.model_dump())
         db.add(item)
+        db.flush()
     else:
         item.state = payload.state
         item.source = payload.source
-    db.commit()
-    db.refresh(item)
     audit(db, request, "entitlement.changed", admin.id, "entitlement", item.id, {"state": item.state})
+    db.refresh(item)
     return {"id": item.id, "user_id": item.user_id, "book_id": item.book_id, "state": item.state, "source": item.source}
 
 

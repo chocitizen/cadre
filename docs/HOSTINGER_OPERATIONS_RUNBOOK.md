@@ -7,9 +7,9 @@ layer. Root remains emergency/administrative authority; no agent receives a
 persistent root credential. Operational elevation is available only through
 the root-owned `/opt/lanseir/scripts/cadre-ops` controller.
 
-The production application API, PostgreSQL, Mission Control state, operations
-controller, and Docker control remain private. Caddy exposes only the HTTPS
-`/healthz` route.
+PostgreSQL, Mission Control state, internal/admin APIs, the operations
+controller, and Docker control remain private. Caddy exposes only the approved
+LANSEIR product routes and HTTPS `/healthz`.
 
 ## Required host baseline
 
@@ -111,7 +111,7 @@ assignment, and activity state but never secret values.
 4. Confirm the exact commit exists on canonical GitHub `main`.
 5. Invoke `deploy <commit-sha>` as the mapped deployment identity; the root controller fetches it independently.
 6. Run `validate`, `status`, `system-health`, and `audit-verify`.
-7. Confirm HTTPS `/healthz` externally and confirm all other public paths return `404`.
+7. Confirm HTTPS `/healthz` and approved product routes externally; confirm every internal/admin route returns `404`.
 8. Run `backup`, `backup-verify`, and `restore-test`.
 9. Run `security-audit` and independently inspect externally reachable ports.
 10. Confirm the current release, last known-good release, timer schedule, and recovery records.

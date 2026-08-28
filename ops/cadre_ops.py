@@ -563,9 +563,10 @@ class Controller:
             "CADRE_DB_PASSWORD",
             "CADRE_DATABASE_URL",
             "CADRE_PUBLIC_HOST",
+            "CADRE_PUBLIC_URL",
             "CADRE_ACME_EMAIL",
-            "CADRE_ADMIN_EMAILS",
             "CADRE_API_TOKENS_JSON",
+            "CADRE_ADMIN_EMAILS",
         }
         missing = sorted(name for name in required if not values.get(name))
         if missing:
@@ -596,15 +597,21 @@ class Controller:
         ):
             raise OperationError("Database URL is inconsistent with the fixed production database policy.")
         host = values["CADRE_PUBLIC_HOST"]
+        public_url = values["CADRE_PUBLIC_URL"]
         email = values["CADRE_ACME_EMAIL"]
-        admin_emails = values["CADRE_ADMIN_EMAILS"].split(",")
         if (
             not re.fullmatch(r"(?=.{1,253}\Z)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", host)
             or not re.fullmatch(r"[^@\s]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", email)
-            or not admin_emails
-            or any(not re.fullmatch(r"[^@\s]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", item) for item in admin_emails)
         ):
-            raise OperationError("Production host or operator email policy is invalid.")
+            raise OperationError("Production host or ACME email is invalid.")
+        if public_url != f"https://{host}":
+            raise OperationError("Production public URL must match the approved HTTPS host.")
+        admin_emails = values["CADRE_ADMIN_EMAILS"].split(",")
+        if not admin_emails or any(
+            not re.fullmatch(r"[^@\s]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}", item)
+            for item in admin_emails
+        ):
+            raise OperationError("Production administrator allowlist is invalid.")
 
         try:
             tokens = json.loads(values["CADRE_API_TOKENS_JSON"])

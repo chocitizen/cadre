@@ -54,20 +54,22 @@ class OpenAICompatibleProvider:
     name = "openai-compatible"
 
     @staticmethod
-    def _validated_endpoint(base_url: str) -> str:
+    def _validated_endpoint(base_url: str, provider: str) -> str:
         parsed = urllib.parse.urlparse(base_url)
         is_loopback = parsed.hostname in {"127.0.0.1", "localhost", "::1"}
-        if parsed.scheme != "https" and not (parsed.scheme == "http" and is_loopback):
-            raise ProviderError("AI base URL must use HTTPS or loopback HTTP")
+        is_internal_litellm = provider == "litellm" and parsed.hostname == "litellm"
+        if parsed.scheme != "https" and not (parsed.scheme == "http" and (is_loopback or is_internal_litellm)):
+            raise ProviderError("AI base URL must use HTTPS or approved internal HTTP")
         if parsed.username or parsed.password or not parsed.hostname:
             raise ProviderError("AI base URL is invalid")
         return base_url.rstrip("/") + "/chat/completions"
 
     async def complete(self, message: str, context: str) -> ProviderResult:
         settings = get_settings()
+        provider = settings.ai_provider.casefold()
         if not settings.ai_api_key:
             raise ProviderError("Configured AI provider is missing its server-side credential")
-        endpoint = self._validated_endpoint(settings.ai_base_url)
+        endpoint = self._validated_endpoint(settings.ai_base_url, provider)
         prompt = message if not context else f"Authorized user context:\n{context[:12000]}\n\nUser request:\n{message}"
         body = json.dumps(
             {
@@ -88,22 +90,31 @@ class OpenAICompatibleProvider:
         )
         started = time.monotonic()
 
-        def send() -> tuple[str, dict]:
+        def send() -> tuple[str, dict, str]:
             try:
                 with urllib.request.urlopen(request, timeout=settings.request_timeout_seconds) as response:
                     payload = json.loads(response.read(2_000_000))
+                    request_id = response.headers.get("x-request-id") or response.headers.get("request-id")
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
                 raise ProviderError("The configured AI provider is unavailable") from exc
             try:
-                return payload["choices"][0]["message"]["content"], payload.get("usage", {})
+                usage = dict(payload.get("usage", {}))
+                if request_id:
+                    usage["request_id"] = request_id
+                response_model = payload.get("model")
+                return (
+                    payload["choices"][0]["message"]["content"],
+                    usage,
+                    response_model if isinstance(response_model, str) else settings.ai_model,
+                )
             except (KeyError, IndexError, TypeError) as exc:
                 raise ProviderError("The configured AI provider returned an invalid response") from exc
 
-        content, usage = await asyncio.to_thread(send)
+        content, usage, routed_model = await asyncio.to_thread(send)
         return ProviderResult(
             content=content,
-            provider=self.name,
-            model=settings.ai_model,
+            provider=provider,
+            model=routed_model,
             latency_ms=round((time.monotonic() - started) * 1000),
             usage=usage,
         )

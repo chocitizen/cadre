@@ -1,126 +1,111 @@
-# LANSEIR / CADRE
+# LANSEIR — Sovereign Platform
 
-LANSEIR is the sovereign product layer. CADRE is its internal operating system.
-This repository contains the FastAPI product, persistence model, private user
-experiences, inspectable AI routing, Mission Control, and governed Hostinger
-operations controller.
+LANSEIR is the sovereign parent platform. CADRE is its internal execution
+system: Mission Control, Al, ARC, Invictus, Porter, Griot, Sentinel, and the
+specialist registry. The repository combines the private operating core with a
+public-facing, mobile-first LANSEIR product experience.
 
-Current repository milestone: **M2 / 0.3.0 release candidate**. It is locally
-validated but not represented as live production. See `CANONICAL_STATUS.md`
-and `docs/EXTERNAL_DEPENDENCY_PACKET.md` for the exact boundary.
+## Install
 
-## Product capabilities
+From the CADRE project root after extracting this package:
 
-- Responsive public and authenticated shells, legal/support paths, loading,
-  empty, error, success, and not-found states
-- Database-backed signup, sign-in/out, session restoration, password change,
-  reset/verification token lifecycle, profile, export, and deletion APIs
-- HttpOnly opaque sessions, double-submit CSRF, role-aware admin access,
-  ownership checks, request IDs, rate/resource limits, and security headers
-- VESSEL library metadata, entitlements, chapters, reading/audio position,
-  notes, and bookmarks; manuscript/audio remain gated to authorized sources
-- Private Captain's Log CRUD and search
-- Stateful sequential Voyages with reflections and resumable progress
-- Persistent Reflection Guide conversations with a zero-cost local provider
-  and an opt-in OpenAI-compatible provider abstraction
-- Specialist registry, observable agent runs, actual failure states, audit
-  events, support intake, and authorization-protected Mission Control
-- Additive migration ledger preserving M1 registry data
-- Root-owned, typed, allowlisted Hostinger operations with release-bound
-  health, fail-closed audit evidence, backup/restore controls, and rollback
+```bash
+cp .env.example .env
+```
 
-## Local development
+Replace `change_me` in ignored `.env` with one strong database password in
+both `CADRE_DB_PASSWORD` and the URL-encoded password inside
+`CADRE_DATABASE_URL`. Replace every API token placeholder with a different
+random value of at least 32 characters. Do not edit tracked Compose policy or
+commit the populated file.
 
-Python 3.12 is the validated runtime.
+Then run:
+
+```bash
+docker compose up -d --build
+```
+
+Validate:
+
+```bash
+./scripts/validate.sh
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+The API binds to loopback only. For a remote private host, use an authenticated
+SSH tunnel or a separately approved HTTPS reverse proxy; do not publish port
+8000 directly.
+
+## Local development without Docker
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install 'pip==26.2.1'
-python -m pip install -e '.[dev]'
-cp .env.example .env
-```
-
-For a zero-infrastructure local run, set an ignored `.env`:
-
-```text
-CADRE_ENV=development
-CADRE_DATABASE_URL=sqlite:///./cadre.db
-CADRE_ADMIN_EMAILS=owner@example.com
-CADRE_AI_PROVIDER=local
-```
-
-Start and validate:
-
-```bash
-./scripts/validate.sh
+pip install -e '.[dev]'
+export CADRE_DATABASE_URL='sqlite:///./cadre.db'
+pytest -q
 uvicorn app.main:app --reload
 ```
 
-Open `http://127.0.0.1:8000/`. Development API documentation is available at
-`/docs`; production disables Swagger, ReDoc, and OpenAPI schema routes.
+## Product and internal APIs
 
-## Environment policy
+- Public product: identity, account control/export/deletion, library,
+  entitlements, reading progress, bookmarks, notes, Captain's Log, Voyages,
+  Support, and the LANSEIR Guide.
+- Private CADRE: doctrine, projects, Command Briefs, Mission Control, specialist
+  dispatch, evidence verification, recovery/FIX, provenance, and Porter
+  lifecycle records.
+- Minimal public health: `GET /api/v1/health` and the proxy alias `/healthz`.
 
-All names use the `CADRE_` prefix. Populate only ignored `.env` or the
-root-owned production secret file; never commit values.
+Product routes use secure server sessions and CSRF protection for mutations.
+Internal routes require a role-scoped service bearer token and are denied by
+the production proxy. Administrator status is never inferred from signup: a
+verified, configured email must be explicitly promoted by Mission Control.
+VESSEL chapters can be installed only when their content hash matches an
+approved canonical source record.
 
-Required in production:
+Mission completion is evidence-gated. Status messages do not count as progress;
+failed, blocked, stalled, or verification-failed missions expose FIX. A
+deterministic failure dispatches an Al recovery mission before the bounded retry
+of the original action. See `docs/MISSION_EXECUTION_STANDARD.md`.
 
-- `CADRE_DATABASE_URL`
-- `CADRE_API_TOKENS_JSON`
-- `CADRE_ADMIN_EMAILS`
-- `CADRE_RELEASE_ID`
-- Host policy values in `ops/config/cadre.env.example`
+## Governed Hostinger operations
 
-AI routing defaults to `local` and incurs no provider cost. Remote routing is
-inactive unless `CADRE_AI_PROVIDER`, `CADRE_AI_MODEL`, `CADRE_AI_BASE_URL`, and
-the server-side `CADRE_AI_API_KEY` are explicitly configured. HTTPS is
-required except for a loopback model gateway. The browser never receives the
-provider credential.
+The root-owned `cadre-ops` controller accepts only these named operations:
 
-## Data and migrations
-
-Startup calls `app.db.migrations.run_migrations`. M2 is additive: it creates
-new tables/indexes and records `20260828_01_lanseir_product_spine`; it does not
-rewrite or delete M1 registry data. Future destructive or column-altering work
-requires explicit migration SQL and a verified backup.
-
-Primary durable domains are users/sessions, books/chapters/entitlements,
-reading state, notes/bookmarks, private journals, Voyages/lessons/reflections,
-AI conversations/messages, specialists/runs, support, and audit events.
-
-## Validation
-
-```bash
-python -m pytest -q -p no:cacheprovider
-python -m mypy --cache-dir=/dev/null app
-node --check app/web/static/app.js
-python -m pip check
-python -m pip_audit -r requirements.lock --no-deps --disable-pip --strict \
-  --cache-dir /tmp/cadre-pip-audit-cache
-git diff --check
+```text
+status  health  deploy  validate  rollback
+restart <approved-service>  logs <approved-service>
+backup  backup-status  backup-verify  restore-test
+release-current  release-history  system-health
+security-audit  audit-verify
 ```
 
-`requirements.lock` binds every production dependency to a reviewed Linux
-x86_64 wheel hash. Production Python, PostgreSQL, and Caddy images are pinned
-to verified multi-platform registry digests.
+Unix identity maps to a policy role; action names, typed arguments, and service
+targets are allowlisted; arbitrary shell strings are rejected. Mutations write
+a durable intent before execution and a terminal hash-chained receipt after it.
+The ledger uses a constant-time root-owned head checkpoint and a fail-closed
+capacity ceiling.
 
-## Production operations
+Deploy accepts only an exact commit already contained in canonical GitHub
+`main`. The root controller fetches the fixed repository, verifies ancestry,
+generates the archive itself, applies extraction quotas, and binds container
+health to both the Compose API service and the expected release SHA.
 
-Production uses `ops/config/docker-compose.prod.yml`, a private PostgreSQL
-network, an unprivileged read-only API container, and Caddy HTTPS. The public
-product and intentionally public API paths are proxied to FastAPI; application
-authorization protects private/user/admin/service resources. PostgreSQL,
-Docker control, and the operations state API are not publicly exposed.
+See `docs/HOSTINGER_OPERATIONS_RUNBOOK.md`, `docs/DEPLOYMENT_SOP.md`,
+`docs/RECOVERY.md`, `docs/PORTER_SOP.md`, and `SECURITY.md` before production
+activation.
 
-Read these before activation:
+## Security boundary
 
-- `docs/HOSTINGER_OPERATIONS_RUNBOOK.md`
-- `docs/RECOVERY.md`
-- `SECURITY.md`
-- `docs/ARCHITECTURE.md`
-- `docs/EXTERNAL_DEPENDENCY_PACKET.md`
-
-A clean repository or local health response is not evidence of a live VPS,
-HTTPS, backups, restore capability, or remote deployment.
+The production proxy publishes the LANSEIR product and `/healthz` over HTTPS.
+Doctrine, registries, Mission Control, admin/content-source endpoints,
+PostgreSQL, Docker control, and operations state remain internal. The default
+Guide is local and provider-free. LiteLLM/OpenRouter activation remains blocked
+until credentials, service health, routing policy, and provider provenance are
+validated without exposing secrets.

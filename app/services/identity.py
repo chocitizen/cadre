@@ -82,10 +82,11 @@ def issue_session(db: Session, response: Response, user: User) -> str:
         expires_at=expires,
     )
     db.add(session)
-    db.commit()
+    db.flush()
+    secure = _secure_cookie()
     max_age = get_settings().session_days * 86_400
-    response.set_cookie(SESSION_COOKIE, raw_token, max_age=max_age, path="/", secure=_secure_cookie(), httponly=True, samesite="lax")
-    response.set_cookie(CSRF_COOKIE, raw_csrf, max_age=max_age, path="/", secure=_secure_cookie(), httponly=False, samesite="lax")
+    response.set_cookie(SESSION_COOKIE, raw_token, httponly=True, secure=secure, samesite="lax", max_age=max_age, path="/")
+    response.set_cookie(CSRF_COOKIE, raw_csrf, httponly=False, secure=secure, samesite="lax", max_age=max_age, path="/")
     return raw_csrf
 
 
@@ -93,7 +94,6 @@ def clear_session(db: Session, request: Request, response: Response) -> None:
     raw = request.cookies.get(SESSION_COOKIE)
     if raw:
         db.execute(delete(UserSession).where(UserSession.token_hash == token_hash(raw)))
-        db.commit()
     response.delete_cookie(SESSION_COOKIE, path="/", secure=_secure_cookie(), samesite="lax")
     response.delete_cookie(CSRF_COOKIE, path="/", secure=_secure_cookie(), samesite="lax")
 

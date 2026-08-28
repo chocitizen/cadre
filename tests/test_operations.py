@@ -48,8 +48,9 @@ def make_controller(tmp_path: Path, actor: str = "lanseir-deploy") -> Controller
                 f"CADRE_DB_PASSWORD={password}",
                 f"CADRE_DATABASE_URL=postgresql+psycopg://cadre:{password}@db:5432/cadre",
                 "CADRE_PUBLIC_HOST=cadre.test.internal",
+                "CADRE_PUBLIC_URL=https://cadre.test.internal",
                 "CADRE_ACME_EMAIL=ops@cadre.test.internal",
-                "CADRE_ADMIN_EMAILS=admin@cadre.test.internal",
+                "CADRE_ADMIN_EMAILS=owner@cadre.test.internal",
                 f"CADRE_API_TOKENS_JSON={json.dumps(tokens, separators=(',', ':'))}",
             )
         )
@@ -299,8 +300,9 @@ def test_placeholder_secrets_fail_closed(tmp_path: Path):
         "CADRE_DB_PASSWORD=replace_with_a_strong_unique_password\n"
         "CADRE_DATABASE_URL=postgresql+psycopg://cadre:replace_with_url_encoded_password@db:5432/cadre\n"
         "CADRE_PUBLIC_HOST=cadre.example.com\n"
+        "CADRE_PUBLIC_URL=https://cadre.example.com\n"
         "CADRE_ACME_EMAIL=operations@example.com\n"
-        "CADRE_ADMIN_EMAILS=admin@example.com\n"
+        "CADRE_ADMIN_EMAILS=owner@example.com\n"
         "CADRE_API_TOKENS_JSON={}\n",
         encoding="utf-8",
     )

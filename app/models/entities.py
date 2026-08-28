@@ -36,6 +36,12 @@ class ContentState(str, enum.Enum):
     archived = "archived"
 
 
+class ContentSourceStatus(str, enum.Enum):
+    validated = "validated"
+    approved = "approved"
+    superseded = "superseded"
+
+
 class RunStatus(str, enum.Enum):
     queued = "queued"
     running = "running"
@@ -48,6 +54,28 @@ class SchemaMigration(Base):
     __tablename__ = "schema_migrations"
     version: Mapped[str] = mapped_column(String(80), primary_key=True)
     applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MissionStatus(str, enum.Enum):
+    queued = "queued"
+    dispatched = "dispatched"
+    running = "running"
+    verification_pending = "verification_pending"
+    verified = "verified"
+    failed = "failed"
+    blocked = "blocked"
+    stalled = "stalled"
+    verification_failed = "verification_failed"
+    recovering = "recovering"
+    cancelled = "cancelled"
+
+
+class ArtifactState(str, enum.Enum):
+    generated = "generated"
+    validated = "validated"
+    installed = "installed"
+    registered = "registered"
+    archived = "archived"
 
 
 class DoctrineEntry(Base):
@@ -94,6 +122,7 @@ class CommandBrief(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
     project: Mapped[Project] = relationship(back_populates="briefs")
+    missions: Mapped[list["Mission"]] = relationship(back_populates="command_brief", cascade="all, delete-orphan")
 
 
 class User(Base):
@@ -161,6 +190,31 @@ class Chapter(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
     book: Mapped[Book] = relationship(back_populates="chapters")
+
+
+class CanonicalContentSource(Base):
+    __tablename__ = "canonical_content_sources"
+    __table_args__ = (UniqueConstraint("book_id", "manifest_sha256", name="uq_content_source_book_manifest"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    book_id: Mapped[str] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    source_locator: Mapped[str] = mapped_column(String(500))
+    manifest_sha256: Mapped[str] = mapped_column(String(64))
+    chapter_hashes: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[ContentSourceStatus] = mapped_column(Enum(ContentSourceStatus), default=ContentSourceStatus.validated, index=True)
+    approved_by: Mapped[str] = mapped_column(String(120), default="")
+    approval_receipt: Mapped[str] = mapped_column(String(500), default="")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ChapterProvenance(Base):
+    __tablename__ = "chapter_provenance"
+    __table_args__ = (UniqueConstraint("chapter_id", name="uq_chapter_provenance_chapter"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    chapter_id: Mapped[str] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), index=True)
+    source_id: Mapped[str] = mapped_column(ForeignKey("canonical_content_sources.id", ondelete="RESTRICT"), index=True)
+    content_sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Entitlement(Base):
@@ -327,6 +381,69 @@ class AgentRun(Base):
     usage: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Mission(Base):
+    __tablename__ = "missions"
+    __table_args__ = (Index("ix_missions_dispatch", "status", "priority", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    command_brief_id: Mapped[str] = mapped_column(ForeignKey("command_briefs.id", ondelete="CASCADE"), index=True)
+    recovery_for_id: Mapped[str | None] = mapped_column(ForeignKey("missions.id", ondelete="SET NULL"), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(240))
+    action_key: Mapped[str] = mapped_column(String(80), index=True)
+    specialist_key: Mapped[str] = mapped_column(String(80), default="al", index=True)
+    status: Mapped[MissionStatus] = mapped_column(Enum(MissionStatus), default=MissionStatus.queued, index=True)
+    priority: Mapped[int] = mapped_column(Integer, default=50)
+    dependency_ids: Mapped[list] = mapped_column(JSON, default=list)
+    input_payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    expected_outputs: Mapped[list] = mapped_column(JSON, default=list)
+    validation_criteria: Mapped[list] = mapped_column(JSON, default=list)
+    failure_class: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    root_cause: Mapped[str] = mapped_column(Text, default="")
+    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    max_retries: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    command_brief: Mapped[CommandBrief] = relationship(back_populates="missions")
+    evidence: Mapped[list["MissionEvidence"]] = relationship(back_populates="mission", cascade="all, delete-orphan")
+    artifacts: Mapped[list["MissionArtifact"]] = relationship(back_populates="mission", cascade="all, delete-orphan")
+
+
+class MissionEvidence(Base):
+    __tablename__ = "mission_evidence"
+    __table_args__ = (Index("ix_mission_evidence_mission_created", "mission_id", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(40), index=True)
+    summary: Mapped[str] = mapped_column(Text)
+    locator: Mapped[str] = mapped_column(String(500), default="")
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    passed: Mapped[bool] = mapped_column(Boolean, default=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_by: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    mission: Mapped[Mission] = relationship(back_populates="evidence")
+
+
+class MissionArtifact(Base):
+    __tablename__ = "mission_artifacts"
+    __table_args__ = (UniqueConstraint("mission_id", "sha256", name="uq_mission_artifact_hash"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(240))
+    source_locator: Mapped[str] = mapped_column(String(500))
+    destination_locator: Mapped[str] = mapped_column(String(500), default="")
+    archive_locator: Mapped[str] = mapped_column(String(500), default="")
+    sha256: Mapped[str] = mapped_column(String(64))
+    state: Mapped[ArtifactState] = mapped_column(Enum(ArtifactState), default=ArtifactState.generated, index=True)
+    source_cleaned: Mapped[bool] = mapped_column(Boolean, default=False)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    mission: Mapped[Mission] = relationship(back_populates="artifacts")
 
 
 class SupportRequest(Base):

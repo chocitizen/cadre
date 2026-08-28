@@ -1,5 +1,18 @@
 # LANSEIR / CADRE Recovery
 
+## Functional recovery and browser FIX
+
+Recovery applies to every mission action, not only deployment. Failed, blocked,
+stalled, and verification-failed missions expose FIX in Mission Control. A
+deterministic failure automatically creates and dispatches an Al recovery
+mission containing the original failure evidence and root-cause context.
+
+Al must record both diagnosis and repair evidence. Griot or Mission Control must
+record passed verification before the original mission can resume. Resumption
+increments the retry counter and cannot exceed the mission retry ceiling.
+Authorization, policy, and unresolved dependency failures remain blocked for a
+real authority or dependency change; FIX does not bypass controls.
+
 ## Release rollback
 
 `cadre-ops deploy` preserves the former current release as `previous` before

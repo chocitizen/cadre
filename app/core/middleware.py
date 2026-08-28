@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from collections import defaultdict, deque
@@ -148,22 +149,37 @@ class RequestContextMiddleware:
 
 
 class RateLimitMiddleware:
-    def __init__(self, app: Callable[..., Awaitable[None]], requests_per_minute: int = 20):
+    def __init__(self, app: Callable[..., Awaitable[None]], requests_per_minute: int = 20, max_keys: int = 10_000):
         self.app = app
         self.limit = requests_per_minute
+        self.max_keys = max_keys
         self.events: dict[str, deque[float]] = defaultdict(deque)
         self.lock = asyncio.Lock()
 
+    @staticmethod
+    def _category(path: str) -> str | None:
+        if path.startswith("/api/v1/auth/"):
+            return "auth"
+        if path == "/api/v1/support":
+            return "support"
+        if re.fullmatch(r"/api/v1/conversations/[0-9a-f-]{36}/messages", path):
+            return "ai-message"
+        return None
+
     async def __call__(self, scope: dict[str, Any], receive: Callable, send: Callable) -> None:
-        if scope.get("type") != "http" or not (
-            scope.get("path", "").startswith("/api/v1/auth/") or scope.get("path", "").endswith("/messages")
-        ):
+        category = self._category(scope.get("path", ""))
+        if scope.get("type") != "http" or category is None:
             await self.app(scope, receive, send)
             return
         client = scope.get("client") or ("unknown", 0)
-        key = f"{client[0]}:{scope.get('path')}"
+        key = f"{client[0]}:{category}"
         now = time.monotonic()
         async with self.lock:
+            for stale_key in [name for name, values in self.events.items() if not values or values[-1] < now - 60]:
+                self.events.pop(stale_key, None)
+            if key not in self.events and len(self.events) >= self.max_keys:
+                await json_response(send, 503, "Rate limiter capacity is temporarily unavailable", [(b"retry-after", b"60")])
+                return
             window = self.events[key]
             while window and window[0] < now - 60:
                 window.popleft()

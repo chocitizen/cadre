@@ -25,8 +25,12 @@ KNOWN_ROLES = {
 }
 WRITE_ROLES = frozenset({"mission_control", "al"})
 DOCTRINE_READ_ROLES = frozenset({"mission_control", "al", "griot"})
-REGISTRY_READ_ROLES = frozenset({"mission_control", "al"})
+REGISTRY_READ_ROLES = frozenset({"mission_control", "al", "griot"})
 OPERATIONS_READ_ROLES = frozenset({"mission_control", "al"})
+MISSION_READ_ROLES = frozenset({"mission_control", "al", "invictus", "porter", "griot", "sentinel"})
+MISSION_WRITE_ROLES = frozenset({"mission_control", "al"})
+PORTER_WRITE_ROLES = frozenset({"mission_control", "porter"})
+MISSION_VERIFY_ROLES = frozenset({"mission_control", "griot"})
 
 
 @dataclass(frozen=True)
@@ -106,6 +110,11 @@ require_write = require_roles(*sorted(WRITE_ROLES))
 require_doctrine_read = require_roles(*sorted(DOCTRINE_READ_ROLES))
 require_registry_read = require_roles(*sorted(REGISTRY_READ_ROLES))
 require_operations_read = require_roles(*sorted(OPERATIONS_READ_ROLES))
+require_mission_read = require_roles(*sorted(MISSION_READ_ROLES))
+require_mission_write = require_roles(*sorted(MISSION_WRITE_ROLES))
+require_porter_write = require_roles(*sorted(PORTER_WRITE_ROLES))
+require_mission_verify = require_roles(*sorted(MISSION_VERIFY_ROLES))
+require_admin_promotion = require_roles("mission_control")
 
 
 def require_user(request: Request, db: Session = Depends(get_db)) -> User:
@@ -125,13 +134,13 @@ def require_user_write(request: Request, db: Session = Depends(get_db)) -> User:
 
 
 def require_admin(user: User = Depends(require_user)) -> User:
-    if user.role != "admin":
+    if user.role != "admin" or user.email_verified_at is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access required")
     return user
 
 
 def require_admin_write(request: Request, db: Session = Depends(get_db)) -> User:
     user = require_user_write(request, db)
-    if user.role != "admin":
+    if user.role != "admin" or user.email_verified_at is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access required")
     return user
