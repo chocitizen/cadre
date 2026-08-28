@@ -31,6 +31,7 @@ def test_railway_and_responsive_runtime_contracts():
     assert '${PORT:-8000}' in dockerfile
     assert "viewport-fit=cover" in index
     assert "env(safe-area-inset-bottom)" in css
+    assert "bottom: calc(4.75rem + env(safe-area-inset-bottom))" in css
     assert 'role: "button"' in javascript
     assert 'role: "search"' in javascript
     assert "window.prompt" not in javascript
