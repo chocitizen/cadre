@@ -288,7 +288,7 @@ async function renderBook(slug) {
 }
 
 async function renderJournal() {
-  state.journal = await api("/captains-log"); let selected = state.journal[0] || null;
+  state.journal = await api("/captains-log"); let selected = state.journal[0] || null; let searchQuery = "";
   const main = contentRoot();
   function draw() {
     const list = node("div", { class: "list" }, state.journal.length ? state.journal.map((entry) => node("button", { class: `list-item ${selected?.id === entry.id ? "active" : ""}`, onClick: () => { selected = entry; draw(); } }, node("strong", {}, entry.title), node("span", { class: "small muted" }, new Date(entry.updated_at).toLocaleString()))) : node("div", { class: "empty" }, "Your log is empty. Begin with what is true now."));
@@ -299,11 +299,16 @@ async function renderJournal() {
       form.addEventListener("submit", async (event) => { event.preventDefault(); const values = Object.fromEntries(new FormData(form)); try { const updated = await api(`/captains-log/${selected.id}`, { method: "PUT", body: JSON.stringify({ ...values, prompt: selected.prompt || "" }) }); state.journal = state.journal.map((item) => item.id === updated.id ? updated : item); selected = updated; showToast("Entry saved."); draw(); } catch (error) { form.querySelector(".form-status").replaceChildren(errorBox(error)); } });
       editor.append(form);
     }
-    main.replaceChildren(pageHead("CAPTAIN’S LOG", "Private reflection, held with care.", "Record, revise, search, and return. Your entries are isolated to your account."), node("div", { class: "cluster mb-3" }, button("New entry", createEntry), button("Search", searchEntries, "secondary")), node("div", { class: "editor-layout" }, list, editor));
+    const searchControl = field("Search entries", "journal-search", "search", { required: false, placeholder: "Title or entry" });
+    searchControl.querySelector("input").value = searchQuery;
+    const searchForm = node("form", { class: "journal-search mb-3", role: "search" }, searchControl, node("button", { class: "button secondary", type: "submit" }, "Search"), searchQuery ? button("Clear", clearSearch, "secondary") : null);
+    searchForm.addEventListener("submit", async (event) => { event.preventDefault(); await searchEntries(searchControl.querySelector("input").value); });
+    main.replaceChildren(pageHead("CAPTAIN’S LOG", "Private reflection, held with care.", "Record, revise, search, and return. Your entries are isolated to your account."), node("div", { class: "cluster mb-3" }, button("New entry", createEntry)), searchForm, node("div", { class: "editor-layout" }, list, editor));
   }
   async function createEntry() { const entry = await api("/captains-log", { method: "POST", body: JSON.stringify({ title: "New entry", body: "", prompt: "What is true now?" }) }); state.journal.unshift(entry); selected = entry; draw(); }
   async function deleteEntry() { if (!window.confirm("Delete this private entry permanently?")) return; await api(`/captains-log/${selected.id}`, { method: "DELETE" }); state.journal = state.journal.filter((item) => item.id !== selected.id); selected = state.journal[0] || null; showToast("Entry deleted."); draw(); }
-  async function searchEntries() { const query = window.prompt("Search your private log"); if (query === null) return; state.journal = await api(`/captains-log?query=${encodeURIComponent(query)}`); selected = state.journal[0] || null; draw(); }
+  async function searchEntries(query) { searchQuery = query.trim(); state.journal = await api(`/captains-log?query=${encodeURIComponent(searchQuery)}`); selected = state.journal[0] || null; draw(); }
+  async function clearSearch() { searchQuery = ""; state.journal = await api("/captains-log"); selected = state.journal[0] || null; draw(); }
   draw();
 }
 

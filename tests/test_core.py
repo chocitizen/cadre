@@ -32,6 +32,8 @@ def test_railway_and_responsive_runtime_contracts():
     assert "viewport-fit=cover" in index
     assert "env(safe-area-inset-bottom)" in css
     assert 'role: "button"' in javascript
+    assert 'role: "search"' in javascript
+    assert "window.prompt" not in javascript
 
 
 def test_health_and_core_crud():
