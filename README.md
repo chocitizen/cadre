@@ -64,6 +64,10 @@ uvicorn app.main:app --reload
 - Universal Prompt Gateway: persistent context packets, durable short-command
   semantics, approval/lock resolution, specialist-authority assembly, Al service
   capability discovery, governed dispatch, exact blockers, and audit receipts.
+- Constitutional execution: self-contained copy-ready handoffs, explicit lead /
+  support / validation authority, signal advance-then-deliver sequencing,
+  artifact-plus-note dual delivery, client/channel parity, and fail-closed
+  production readiness.
 - Minimal public health: `GET /api/v1/health` and the proxy alias `/healthz`.
 
 Product routes use secure server sessions and CSRF protection for mutations.
@@ -83,6 +87,16 @@ Authorized interfaces use `POST /api/v1/gateway/resolve`; `STATUS`, `SIGNAL`,
 `YOU KNOW WHAT TO DO` are resolved against canonical state rather than treated
 as isolated chat prompts. See `docs/UNIVERSAL_PROMPT_GATEWAY.md` and
 `docs/AL_OPERATOR_CHARTER.md`.
+
+See `00_governance/cadre_constitutional_execution_standard.md`,
+`docs/CLIENT_EXPERIENCE_SOP.md`, and `docs/GLOBAL_INPUT_HANDOFF_SOP.md` for the
+globally inherited execution contract.
+
+Authorized owner bootstrap is available as
+`python -m app.services.owner_provisioning`. It accepts only an email already in
+`CADRE_ADMIN_EMAILS`, reads the initial credential from a named environment
+variable, never prints that credential, writes an audit receipt, and is
+idempotent. Credential values remain outside Git and public output.
 
 ## Governed Hostinger operations
 

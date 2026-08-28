@@ -36,7 +36,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.4.0",
+    version="0.5.0",
     description="LANSEIR product experience with the CADRE operating system",
     docs_url=None if settings.env == "production" else "/docs",
     redoc_url=None if settings.env == "production" else "/redoc",

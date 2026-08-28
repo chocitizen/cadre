@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class GatewayInput(BaseModel):
     raw_input: str = Field(min_length=1, max_length=100_000)
     interface: str = Field(default="api", pattern=r"^[a-z][a-z0-9_-]{1,79}$")
+    operating_mode: Literal["founder", "client"] = "founder"
     project_id: str | None = Field(default=None, max_length=64)
     reference_id: str | None = Field(default=None, max_length=64)
     execute: bool = True
@@ -42,6 +43,9 @@ class ExecutionStatePatch(BaseModel):
             "relevant_services",
             "last_validated_commit",
             "last_deployment",
+            "production_acceptance",
+            "delivered_artifact_ids",
+            "last_signal_action",
             "rollback_reference",
         }
         unknown = set(self.changes) - allowed

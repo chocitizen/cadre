@@ -20,7 +20,8 @@ The executable registry is `app/services/command_registry.py` and is exposed at
 
 | Founder input | Resolved action |
 | --- | --- |
-| `SIGNAL` | Dispatch the currently staged approved action. |
+| First `SIGNAL` | Dispatch the currently staged approved action. |
+| Following `SIGNAL` | Deliver the resulting registered artifact immediately. |
 | `NOW`, `GO` | Dispatch the current executable action immediately. |
 | `ADVANCE`, `ACT` | Continue the approved workflow. |
 | `ACTIVELY ADVANCE` | Move approved work into implementation. |
@@ -62,6 +63,15 @@ plan, expected outputs, validation criteria, security implications, and the
 durable mission/brief identifiers. Mission completion still requires material
 evidence and an authorized verification record.
 
+Every substantive response contains an `artifact` object and `copy_ready_note`.
+The note is self-contained and includes the objective, governing decisions,
+locked constraints, named authorities, sources, implementation and technical
+requirements, dependencies, security, preservation, commands/configuration,
+validation, acceptance, outputs, reporting, and rollback. When a registered
+mission file is due, `SIGNAL` returns its exact locator, SHA-256, state, and
+delivery note. Previously delivered artifact identifiers remain in execution
+state to prevent silent loss or repeated dispatch.
+
 ## Execution State Protocol
 
 `execution_states` is the runtime authority for cross-process current state.
@@ -83,6 +93,11 @@ consume the context packet and submit gateway requests. Third-party chat or AI
 platforms do not receive this state automatically unless their integration calls
 the API with an authorized service identity. No claim of universal injection is
 made across platforms that do not support that integration.
+
+`interface` records voice, typed, mobile, desktop, command-surface, API,
+agent-to-agent, automation, delegated, and future channel provenance.
+`operating_mode` distinguishes founder and client operation. Neither field may
+degrade routing, completeness, validation, privacy, or delivery.
 
 ## Failure response
 

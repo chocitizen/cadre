@@ -22,6 +22,7 @@ from app.models.entities import (
     GatewayRequest,
     GatewayStatus,
     Mission,
+    MissionArtifact,
     MissionStatus,
     Project,
     ProjectStatus,
@@ -30,11 +31,20 @@ from app.models.entities import (
 from app.schemas.gateway import GatewayInput
 from app.services.capabilities import capability_ready, discover_capabilities
 from app.services.command_registry import CommandSpec, resolve_command
+from app.services.deployment import assess_production_readiness
 from app.services.mission_control import dependencies_satisfied, dispatch_mission, dispatch_next
 
 
 STATE_KEY = "canonical"
-PROTECTED_STATE_FIELDS = frozenset({"approved_decisions", "locked_assets", "rollback_reference"})
+PROTECTED_STATE_FIELDS = frozenset(
+    {
+        "approved_decisions",
+        "locked_assets",
+        "rollback_reference",
+        "production_acceptance",
+        "delivered_artifact_ids",
+    }
+)
 ACTIVE_MISSION_STATES = frozenset(
     {
         MissionStatus.queued,
@@ -251,7 +261,23 @@ def build_context_packet(
     }
 
 
-def assemble_specialists(db: Session, raw_input: str, command: CommandSpec | None) -> dict:
+def _specialist_authority(item: Specialist) -> dict:
+    return {
+        "key": item.key,
+        "name": item.name,
+        "responsibility": item.responsibility,
+        "permissions": list(item.permissions),
+        "standards": list(item.validation_requirements),
+    }
+
+
+def assemble_specialists(
+    db: Session,
+    raw_input: str,
+    command: CommandSpec | None,
+    *,
+    operating_mode: str = "founder",
+) -> dict:
     normalized = raw_input.casefold()
     active = {item.key: item for item in db.scalars(select(Specialist).where(Specialist.is_active.is_(True))).all()}
     security_terms = {"security", "secret", "credential", "auth", "permission", "database", "production"}
@@ -271,23 +297,45 @@ def assemble_specialists(db: Session, raw_input: str, command: CommandSpec | Non
     if lead not in active:
         lead = "al" if "al" in active else next(iter(active), "mission_control")
 
-    support_candidates = ["al", "arc", "invictus", "griot"]
-    support = [key for key in support_candidates if key in active and key != lead]
-    if not security:
-        support = [key for key in support if key != "invictus"]
+    support_candidates: list[str] = []
+    if any(term in normalized for term in engineering_terms) and lead != "al":
+        support_candidates.append("al")
+    if any(term in normalized for term in provider_terms) and lead != "arc":
+        support_candidates.append("arc")
+    if security and lead != "invictus":
+        support_candidates.append("invictus")
+    if any(term in normalized for term in provenance_terms) and lead != "griot":
+        support_candidates.append("griot")
+    if operating_mode == "client" and lead != "liv":
+        support_candidates.append("liv")
+    support = [key for key in dict.fromkeys(support_candidates) if key in active and key != lead]
     reviewer = "invictus" if security and "invictus" in active and lead != "invictus" else "griot"
     if reviewer not in active or reviewer == lead:
         reviewer = "griot" if "griot" in active and lead != "griot" else lead
+    support = [key for key in support if key != reviewer]
     requirements = list(active[lead].validation_requirements) if lead in active else []
-    requirements.extend(["material_evidence_recorded", "canonical_state_updated", "next_action_explicit"])
+    requirements.extend(
+        [
+            "material_evidence_recorded",
+            "self_contained_handoff",
+            "copy_ready_delivery",
+            "canonical_state_updated",
+            "next_action_explicit",
+        ]
+    )
     return {
         "lead_specialist": lead,
         "supporting_specialists": support,
         "validation_specialist": reviewer,
+        "lead_authority": _specialist_authority(active[lead]) if lead in active else None,
+        "supporting_authorities": [_specialist_authority(active[key]) for key in support],
+        "validation_authority": _specialist_authority(active[reviewer]) if reviewer in active else None,
         "security_implications": security,
         "operational_implications": bool(command and command.action in {"dispatch_staged", "dispatch_next", "deploy_staging", "approve_reference"}),
         "canonical_sources_required": ["execution_state", "active_project", "active_command_brief", "doctrine_registry"],
         "acceptance_criteria": list(dict.fromkeys(requirements)),
+        "operating_mode": operating_mode,
+        "experience_sequence": ["intent", "routing", "specialist_execution", "validation", "deliverable", "next_action"],
     }
 
 
@@ -397,7 +445,173 @@ def _approve_reference(db: Session, reference_id: str | None, actor_role: str) -
     ], "Reconcile the referenced Command Brief state."
 
 
-def _draft_request(db: Session, context: dict, payload: GatewayInput, specialists: dict) -> CommandBrief | None:
+def _render_items(values: Sequence[Any], *, empty: str = "None identified.") -> str:
+    if not values:
+        return f"- {empty}"
+    return "\n".join(f"- {value if isinstance(value, str) else json.dumps(value, sort_keys=True, default=str)}" for value in values)
+
+
+def _execution_artifact(
+    brief: CommandBrief,
+    context: dict,
+    specialists: dict,
+    capability_plan: list[dict],
+) -> dict:
+    lead = specialists.get("lead_authority") or {"key": specialists["lead_specialist"], "name": specialists["lead_specialist"]}
+    support = specialists.get("supporting_authorities", [])
+    validator = specialists.get("validation_authority") or {
+        "key": specialists["validation_specialist"],
+        "name": specialists["validation_specialist"],
+    }
+    locked = list(context.get("locked_assets") or [])
+    doctrine = [item.get("key") for item in context.get("doctrine", []) if item.get("key")]
+    sources = list(dict.fromkeys([*brief.source_refs, *locked, *doctrine]))
+    dependencies = [
+        {
+            "service": item["service"],
+            "status": item["status"],
+            "blockers": item.get("blockers", []),
+        }
+        for item in capability_plan
+    ]
+    role_lines = [f"Lead: {lead.get('name')} ({lead.get('key')}) — {lead.get('responsibility', 'owns the objective and integrated result')}."]
+    role_lines.extend(
+        f"Support: {item.get('name')} ({item.get('key')}) — {item.get('responsibility', 'supports the lead')}."
+        for item in support
+    )
+    role_lines.append(
+        f"Validator: {validator.get('name')} ({validator.get('key')}) — {validator.get('responsibility', 'independently validates acceptance')}."
+    )
+    note = "\n".join(
+        [
+            "# CADRE EXECUTION NOTE",
+            "",
+            f"Handoff ID: {brief.id}",
+            f"Operating mode: {specialists.get('operating_mode', 'founder')}",
+            "",
+            "## Objective",
+            brief.objective.strip(),
+            "",
+            "## Authority and specialist team",
+            *role_lines,
+            "",
+            "## Governing decisions and locked constraints",
+            _render_items(context.get("approved_decisions", [])),
+            _render_items(brief.constraints),
+            "",
+            "## Source of truth",
+            _render_items(sources, empty="Use the active project and doctrine registry recorded in this handoff."),
+            "",
+            "## Implementation requirements",
+            "- Inspect the cited canonical state before modification.",
+            "- Preserve every locked or unmentioned element.",
+            "- Execute the objective through the named lead, support, and validation authorities.",
+            "- Produce one integrated execution-ready result; do not return generic AI guidance.",
+            "- Continue approved work until complete or a concrete authority or dependency gate is reached.",
+            "",
+            "## Technical specifications and dependencies",
+            _render_items(dependencies, empty="No external service dependency was identified by capability discovery."),
+            "",
+            "## Security requirements",
+            "- Use least privilege and server-side service identities.",
+            "- Never place passwords, tokens, private keys, or credential values in prompts, artifacts, logs, source control, or public output.",
+            "- Record only sanitized capability and validation metadata.",
+            "",
+            "## Preservation requirements",
+            _render_items(locked, empty="Preserve the current canonical project state and rollback reference."),
+            "",
+            "## Commands and configuration",
+            "- Use the canonical repository's existing commands and configuration for the assigned implementation.",
+            "- Do not invent a path, environment value, credential, domain, or deployment target.",
+            "- When an exact command is not supplied here, inspect the cited repository SOP before executing.",
+            "",
+            "## Validation and acceptance criteria",
+            _render_items(brief.validation_criteria),
+            "",
+            "## Required outputs",
+            _render_items(brief.expected_outputs),
+            "",
+            "## Reporting",
+            "- Return changed artifacts/files, material evidence, validation results, exact accessible URLs when verified, remaining risks, and the next action.",
+            "- Separate local validation, remote publication, deployment, authentication, and production readiness as distinct facts.",
+            "- Provide both the actual artifact/file locator and this complete copy-ready execution note when a file is applicable.",
+            "",
+            "## Rollback and failure handling",
+            f"- Preserve and use rollback reference: {context.get('rollback_reference') or 'resolve the canonical rollback reference before consequential mutation'}.",
+            "- On failure: contain, preserve evidence, diagnose root cause, apply the smallest safe repair, rerun failed and regression checks, and report the exact blocker.",
+        ]
+    )
+    return {
+        "kind": "command_brief",
+        "id": brief.id,
+        "status": brief.status.value,
+        "artifact": {
+            "title": brief.title,
+            "objective": brief.objective,
+            "authority": brief.authority,
+            "specialist_team": {
+                "lead": lead,
+                "support": support,
+                "validator": validator,
+            },
+            "source_of_truth": sources,
+            "locked_constraints": [*brief.constraints, *locked],
+            "dependencies": dependencies,
+            "required_outputs": list(brief.expected_outputs),
+            "acceptance_criteria": list(brief.validation_criteria),
+            "rollback_reference": context.get("rollback_reference"),
+        },
+        "copy_ready_note": note,
+    }
+
+
+def _signal_deliverables(db: Session, delivered_ids: set[str]) -> list[dict]:
+    registered = db.scalars(
+        select(MissionArtifact)
+        .join(Mission, MissionArtifact.mission_id == Mission.id)
+        .where(Mission.status == MissionStatus.verified)
+        .order_by(MissionArtifact.created_at.desc())
+        .limit(25)
+    ).all()
+    due = [item for item in registered if item.id not in delivered_ids]
+    return [
+        {
+            "kind": "mission_artifact",
+            "id": item.id,
+            "mission_id": item.mission_id,
+            "name": item.name,
+            "source_locator": item.source_locator,
+            "destination_locator": item.destination_locator,
+            "archive_locator": item.archive_locator,
+            "sha256": item.sha256,
+            "state": item.state.value,
+            "copy_ready_note": "\n".join(
+                [
+                    "# CADRE DELIVERY NOTE",
+                    "",
+                    f"Artifact: {item.name}",
+                    f"Mission: {item.mission_id}",
+                    f"Source: {item.source_locator}",
+                    f"Destination: {item.destination_locator or 'not yet installed'}",
+                    f"Archive: {item.archive_locator or 'not yet archived'}",
+                    f"SHA-256: {item.sha256}",
+                    f"State: {item.state.value}",
+                    "",
+                    "Dispatch the exact registered artifact. Verify its SHA-256 before use. Do not reconstruct, approximate, or substitute it.",
+                ]
+            ),
+        }
+        for item in due
+    ]
+
+
+def _draft_request(
+    db: Session,
+    context: dict,
+    payload: GatewayInput,
+    specialists: dict,
+    capability_plan: list[dict],
+) -> CommandBrief | None:
     project = context.get("active_project")
     if not project:
         return None
@@ -416,8 +630,22 @@ def _draft_request(db: Session, context: dict, payload: GatewayInput, specialist
             },
             default=str,
         ),
-        constraints=["respect locked source-of-truth assets", "preserve secrets", "validate before completion"],
-        expected_outputs=["material deliverable", "validation evidence", "provenance receipt"],
+        constraints=[
+            "respect locked source-of-truth assets",
+            "preserve secrets and least privilege",
+            "deliver copy-ready self-contained handoffs",
+            "validate before completion",
+        ],
+        dependencies=[
+            {"service": item["service"], "status": item["status"], "blockers": item.get("blockers", [])}
+            for item in capability_plan
+        ],
+        expected_outputs=[
+            "actual material deliverable or file locator",
+            "complete copy-ready execution note",
+            "validation evidence",
+            "provenance receipt and explicit next action",
+        ],
         validation_criteria=specialists["acceptance_criteria"],
         source_refs=specialists["canonical_sources_required"],
         specialist_roles=[
@@ -500,6 +728,15 @@ def _update_state_from_request(
     existing_blockers = list(payload.get("blocked_work", []))
     payload["blocked_work"] = (existing_blockers + blockers)[-100:]
     payload["last_gateway_request_id"] = request.id
+    if request.command_key == "signal":
+        delivered = list(payload.get("delivered_artifact_ids", []))
+        delivered.extend(
+            item["id"]
+            for item in request.artifacts
+            if item.get("kind") == "mission_artifact" and item.get("id")
+        )
+        payload["delivered_artifact_ids"] = list(dict.fromkeys(delivered))[-500:]
+        payload["last_signal_action"] = actions_completed[-1] if actions_completed else next_action
     if request.command_key == "deploy":
         deployment_state = dict(payload.get("deployment_state", {}))
         deployment_state["railway_staging"] = request.status.value
@@ -529,7 +766,13 @@ def resolve_gateway_request(
 ) -> dict:
     command = resolve_command(payload.raw_input)
     context = build_context_packet(db, settings, project_id=payload.project_id, repository_root=repository_root)
-    specialists = assemble_specialists(db, payload.raw_input, command)
+    state = get_execution_state(db, settings)
+    specialists = assemble_specialists(
+        db,
+        payload.raw_input,
+        command,
+        operating_mode=payload.operating_mode,
+    )
     discovery = discover_capabilities(settings, repository_root)
     capability_plan = _capability_plan(command, payload.raw_input, discovery)
     actions_attempted: list[str] = []
@@ -561,7 +804,7 @@ def resolve_gateway_request(
         if not payload.execute:
             next_action = "Resubmit with execute=true to create the governed draft Command Brief."
         else:
-            brief = _draft_request(db, context, payload, specialists)
+            brief = _draft_request(db, context, payload, specialists, capability_plan)
             if brief is None:
                 blockers.append(
                     _blocker(
@@ -577,7 +820,7 @@ def resolve_gateway_request(
                 next_action = "Establish the canonical active project."
             else:
                 actions_completed.append(f"Created governed draft Command Brief {brief.id}")
-                artifacts.append({"kind": "command_brief", "id": brief.id, "status": brief.status.value})
+                artifacts.append(_execution_artifact(brief, context, specialists, capability_plan))
                 validation.append({"check": "approval_gate", "passed": True, "detail": "Draft was not auto-approved."})
                 status = GatewayStatus.awaiting_approval
                 next_action = f"Approve reference {brief.id} with +, then issue ADVANCE."
@@ -601,8 +844,43 @@ def resolve_gateway_request(
             validation.append({"check": "explicit_reference", "passed": not blockers, "detail": payload.reference_id or "missing"})
         else:
             next_action = "Resubmit with execute=true to apply the referenced approval."
+    elif command.action == "dispatch_staged":
+        actions_attempted.append("resolve_signal_sequence")
+        delivered_ids = set(state.payload.get("delivered_artifact_ids", []))
+        due = _signal_deliverables(db, delivered_ids)
+        if due:
+            actions_completed.append(f"Delivered {len(due)} due verified artifact(s)")
+            artifacts.extend(due)
+            validation.append({"check": "due_artifact_delivery", "passed": True, "detail": f"{len(due)} delivered"})
+            status = GatewayStatus.completed
+            next_action = "Use the exact delivered artifact and retain its checksum with the execution record."
+        elif payload.execute:
+            next_mission = dispatch_next(db)
+            if next_mission is None:
+                actions_completed.append("No approved executable work or due artifact was found")
+                validation.append({"check": "canonical_state_resolved", "passed": True, "detail": f"Revision {context['state_revision']}"})
+                status = GatewayStatus.completed
+                next_action = "No approved executable mission or due artifact is staged."
+            else:
+                actions_completed.append(f"Dispatched mission {next_mission.id}")
+                artifacts.append({"kind": "mission", "id": next_mission.id, "status": next_mission.status.value})
+                validation.append({"check": "approval_and_dependencies", "passed": True, "detail": next_mission.command_brief_id})
+                status = GatewayStatus.dispatched
+                next_action = f"{next_mission.specialist_key} starts mission {next_mission.id} and registers its result for the following SIGNAL."
+        else:
+            next_action = "Resubmit SIGNAL with execute=true to advance approved work or deliver the due artifact."
     elif command.action == "deploy_staging":
         actions_attempted.extend(["discover_railway_capability", "resolve_deployment_ready_mission"])
+        readiness = assess_production_readiness(state.payload.get("production_acceptance"))
+        artifacts.append({"kind": "deployment_readiness", "assessment": readiness})
+        validation.append(
+            {
+                "check": "production_readiness",
+                "passed": readiness["ready"],
+                "detail": readiness["status"],
+                "missing": readiness["missing"],
+            }
+        )
         if not capability_ready(discovery, "railway", "staging.deploy"):
             blockers.append(
                 _blocker(
@@ -665,7 +943,6 @@ def resolve_gateway_request(
         else:
             next_action = "Resubmit with execute=true to dispatch the canonical next mission."
 
-    state = get_execution_state(db, settings)
     record = _record_request(
         db,
         settings,

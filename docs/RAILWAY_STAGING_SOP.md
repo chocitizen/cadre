@@ -29,6 +29,12 @@ mobile/tablet/desktop widths, capture the staging URL, record the Railway
 deployment identifier, and attach evidence to the mission. A URL without HTTP
 and rendering verification is not a completed staging deployment.
 
+For a private command surface, staging acceptance additionally requires an
+allowlisted owner account, verified live authentication, protected-interface
+smoke test, exact login URL, safe owner identity receipt, and a documented
+credential-delivery path. These checks may validate staging but do not rename it
+production or satisfy production `READY`.
+
 Railway staging never promotes itself to Hostinger production. Production
 promotion is a separate approved mission using the Hostinger operations policy,
 release-bound health, backup, and rollback acceptance.

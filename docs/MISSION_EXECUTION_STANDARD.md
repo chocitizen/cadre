@@ -12,6 +12,13 @@ substantive requests become draft Command Briefs; short commands may dispatch
 only already-approved, dependency-ready missions. Gateway resolution does not
 weaken mission evidence or verification gates.
 
+Every substantive Command Brief is also an execution artifact. It identifies
+the strongest appropriate lead, supporting, and validation authorities and
+contains sufficient objective, authority, source, constraint, requirement,
+dependency, security, preservation, command/configuration, validation, output,
+reporting, and rollback context to execute without prior chat history. The
+gateway returns that artifact and a discrete copy-ready note.
+
 ## Canonical execution sequence
 
 1. Translate an approved Command Brief into bounded missions with named outputs,
@@ -27,6 +34,8 @@ weaken mission evidence or verification gates.
    promotes the mission to verified.
 7. Complete the Command Brief only when every mission is verified.
 8. Dispatch the next dependency-ready mission automatically.
+9. When a material file exists, register its locator and SHA-256 and deliver it
+   with the complete execution note. Status cannot substitute for either item.
 
 “Still working,” “in progress,” “ongoing,” “continuing,” and equivalent status
 messages are rejected as evidence. A dashboard count or agent claim is not proof.
@@ -47,3 +56,6 @@ pending, verified, failed, blocked, stalled, verification failed, recovering,
 and cancelled. “Complete” means evidence exists, validation passed, and the
 authorized verifier accepted the result. Local validation, GitHub publication,
 deployment, and live production acceptance are separate facts.
+
+Founder and client missions use the same completion contract across voice,
+typed, mobile, desktop, API, automation, and delegated interfaces.

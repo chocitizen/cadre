@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "active_project": "lanseir-platform",
-  "current_milestone": "M3 — Universal Prompt Gateway",
-  "current_objective": "Resolve founder commands against canonical LANSEIR state before governed execution.",
+  "current_milestone": "M4 — Constitutional Execution Governance",
+  "current_objective": "Deliver specialist-authority, self-contained, copy-ready execution consistently across every authorized interface.",
   "approved_decisions": [
     {
       "decision": "LANSEIR is the sovereign parent and CADRE is the internal execution system.",
@@ -11,12 +11,17 @@
     {
       "decision": "Production promotion remains distinct from staging validation.",
       "authority": "Deployment governance"
+    },
+    {
+      "decision": "Specialist authority, self-contained handoff, copy-ready delivery, no-fluff execution, signal sequencing, dual delivery, production readiness, and client/input parity are globally inherited.",
+      "authority": "Founder / Mission Control directive — 2026-08-28"
     }
   ],
   "locked_assets": [
     "source_of_truth_registry.json",
     "00_governance/lanseir_identity_charter.md",
-    "00_governance/promotion_rule.md"
+    "00_governance/promotion_rule.md",
+    "00_governance/cadre_constitutional_execution_standard.md"
   ],
   "work_in_progress": [],
   "completed_work": [
@@ -25,6 +30,8 @@
   "blocked_work": [],
   "next_executable_work": null,
   "assigned_agents": [],
+  "delivered_artifact_ids": [],
+  "last_signal_action": null,
   "deployment_state": {
     "railway_staging": "not_configured",
     "hostinger_production": "not_promoted"
@@ -42,5 +49,19 @@
   ],
   "last_validated_commit": null,
   "last_deployment": null,
+  "production_acceptance": {
+    "production_build_successful": false,
+    "production_environment_configured": false,
+    "public_endpoint_resolved": false,
+    "required_services_operational": false,
+    "owner_account_provisioned": false,
+    "production_authentication_verified": false,
+    "protected_interface_smoke_tested": false,
+    "critical_user_journey_validated": false,
+    "credential_delivery_approved": false,
+    "rollback_available": true,
+    "live_login_url": null,
+    "owner_email": null
+  },
   "rollback_reference": "archive/pre-lanseir-autonomy-2026-08-28"
 }

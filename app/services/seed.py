@@ -11,6 +11,12 @@ SEED_DOCTRINE = [
     ("flow", "Flow", "Continue execution through validated handoffs without unnecessary stops. Interrupt the human only for a concrete dependency.", "operating_standard"),
     ("synchronicity", "Synchronicity", "All specialists operate from the same canonical current context, decisions, constraints, source-of-truth references, and downstream dependencies.", "operating_standard"),
     ("alchemy", "Alchemy", "Transform ideas, knowledge, and existing resources into higher-value systems, capabilities, and outcomes through intelligent synthesis, engineering, and refinement.", "capability"),
+    (
+        "constitutional-execution",
+        "CADRE Constitutional Execution Standard",
+        "Every substantive artifact is produced by the strongest appropriate lead, support, and validation authorities; every handoff is self-contained and copy-ready; operational interaction removes filler; SIGNAL advances then delivers; DEPLOY remains NOT READY until production, owner authentication, protected-interface, critical-journey, URL, secure-credential-delivery, and rollback gates pass; founder and client workflows inherit the same behavior across voice, text, mobile, desktop, API, automation, and future interfaces.",
+        "governing_standard",
+    ),
 ]
 
 
@@ -22,10 +28,10 @@ def seed_doctrine(db: Session) -> None:
 
 
 SPECIALISTS = [
-    ("arc", "ARC", "AI integration and system architecture", ["architecture", "ai_routing"], ["integration", "architecture", "provider"], ["contract_validated", "failure_path_tested"]),
-    ("invictus", "Invictus", "Security review and risk validation", ["security_review"], ["security", "privacy", "authorization"], ["finding_validated", "counterevidence_checked"]),
-    ("porter", "Porter", "Maintenance and system housekeeping", ["maintenance"], ["cleanup", "dependency", "drift"], ["tests_pass", "rollback_available"]),
-    ("griot", "Griot", "Provenance, audit, and canonical record stewardship", ["audit", "provenance"], ["source", "history", "record"], ["source_cited", "receipt_recorded"]),
+    ("arc", "ARC", "AI integration and system architecture", ["architecture", "ai_routing"], ["integration", "architecture", "provider"], ["contract_validated", "failure_path_tested", "self_contained_handoff"]),
+    ("invictus", "Invictus", "Security review and risk validation", ["security_review"], ["security", "privacy", "authorization"], ["finding_validated", "counterevidence_checked", "secrets_preserved"]),
+    ("porter", "Porter", "Maintenance and system housekeeping", ["maintenance"], ["cleanup", "dependency", "drift"], ["tests_pass", "rollback_available", "dual_delivery_recorded"]),
+    ("griot", "Griot", "Provenance, audit, and canonical record stewardship", ["audit", "provenance"], ["source", "history", "record"], ["source_cited", "receipt_recorded", "copy_ready_delivery"]),
     (
         "al",
         "Al",
@@ -42,9 +48,9 @@ SPECIALISTS = [
             "rollback_preparation",
         ],
         ["engineering", "repository", "build", "test", "deploy", "automation", "integration", "recovery"],
-        ["tests_pass", "secrets_preserved", "rollback_available", "material_evidence_recorded"],
+        ["tests_pass", "secrets_preserved", "rollback_available", "material_evidence_recorded", "self_contained_handoff", "copy_ready_delivery"],
     ),
-    ("liv", "Liv", "Personal and client operations", ["client_operations"], ["personal", "client", "journey"], ["privacy_preserved", "next_action_clear"]),
+    ("liv", "Liv", "Personal and client operations", ["client_operations"], ["personal", "client", "journey"], ["privacy_preserved", "friction_minimized", "next_action_clear", "channel_parity"]),
     ("harv", "Harv", "Business operations and execution", ["business_operations"], ["business", "launch", "operations"], ["owner_identified", "result_measurable"]),
     ("concierge", "Concierge", "Procurement and integration coordination", ["procurement", "integration"], ["procure", "vendor", "connect"], ["authority_confirmed", "exit_path_documented"]),
 ]
@@ -98,7 +104,7 @@ def seed_product(db: Session) -> None:
                     validation_requirements=validation,
                 )
             )
-        elif key == "al":
+        else:
             specialist.name = name
             specialist.responsibility = responsibility
             specialist.permissions = permissions
